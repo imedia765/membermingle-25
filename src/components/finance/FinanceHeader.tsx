@@ -18,7 +18,15 @@ export function FinanceHeader() {
               Add Payment
             </Button>
           </DialogTrigger>
-          <AddPaymentDialog />
+          <AddPaymentDialog onClose={() => {
+            const dialogElement = document.querySelector('[role="dialog"]');
+            if (dialogElement) {
+              const closeButton = dialogElement.querySelector('[data-state="closed"]');
+              if (closeButton instanceof HTMLElement) {
+                closeButton.click();
+              }
+            }
+          }} />
         </Dialog>
 
         <Dialog>
