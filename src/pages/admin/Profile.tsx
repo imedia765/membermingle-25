@@ -9,13 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 
-interface Payment {
-  date: string;
-  amount: string;
-  status: string;
-  type: string;
-}
-
 export default function Profile() {
   const [searchDate, setSearchDate] = useState("");
   const [searchAmount, setSearchAmount] = useState("");
@@ -87,39 +80,6 @@ export default function Profile() {
     },
   });
 
-  // Fetch payment history
-  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
-    queryKey: ['member-payments', memberData?.id],
-    enabled: !!memberData?.id,
-    queryFn: async () => {
-      console.log('Fetching payments for member:', memberData?.id);
-      
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('member_id', memberData.id)
-        .order('payment_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching payments:', error);
-        toast({
-          title: "Error fetching payments",
-          description: error.message,
-          variant: "destructive",
-        });
-        return [];
-      }
-
-      console.log('Found payments:', data);
-      return (data || []).map(payment => ({
-        date: payment.payment_date,
-        amount: payment.amount.toString(),
-        status: payment.status,
-        type: payment.payment_type
-      }));
-    },
-  });
-
   // Mock document types (this could be moved to a constants file)
   const documentTypes = [
     { type: 'Identification', description: 'Valid ID document (Passport, Driving License)' },
@@ -134,7 +94,7 @@ export default function Profile() {
     { name: 'Proof of Address.pdf', uploadDate: '2024-02-15', type: 'Address Proof' },
   ];
 
-  if (memberLoading || paymentsLoading) {
+  if (memberLoading) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto p-6">
         <Skeleton className="h-8 w-64" />
@@ -147,12 +107,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  const filteredPayments = paymentsData?.filter(payment => {
-    const matchesDate = searchDate ? payment.date.includes(searchDate) : true;
-    const matchesAmount = searchAmount ? payment.amount.includes(searchAmount) : true;
-    return matchesDate && matchesAmount;
-  }) || [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-6">
@@ -167,7 +121,7 @@ export default function Profile() {
           documentTypes={documentTypes}
         />
         <PaymentHistorySection 
-          payments={filteredPayments}
+          memberId={memberData?.id || ''}
           searchDate={searchDate}
           searchAmount={searchAmount}
           onSearchDateChange={setSearchDate}
