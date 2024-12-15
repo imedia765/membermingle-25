@@ -3,10 +3,10 @@ import { MemberSearchResult } from "./types";
 
 interface MemberSearchResultsProps {
   members: MemberSearchResult[] | null;
-  onSelectMember: (member: MemberSearchResult) => void;
+  onSelect: (member: MemberSearchResult) => void;
 }
 
-export function MemberSearchResults({ members, onSelectMember }: MemberSearchResultsProps) {
+export function MemberSearchResults({ members, onSelect }: MemberSearchResultsProps) {
   if (!members || members.length === 0) return null;
 
   return (
@@ -16,7 +16,7 @@ export function MemberSearchResults({ members, onSelectMember }: MemberSearchRes
           <div
             key={member.id}
             className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-            onClick={() => onSelectMember(member)}
+            onClick={() => onSelect(member)}
           >
             <div>
               <p className="font-medium">{member.full_name}</p>
