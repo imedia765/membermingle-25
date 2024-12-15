@@ -35,7 +35,7 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
-  // Query for searching members
+  // Query for searching members with distinct results
   const { data: members } = useQuery({
     queryKey: ['members', searchTerm],
     queryFn: async () => {
@@ -45,10 +45,21 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
         .from('members')
         .select('id, full_name, member_number, email')
         .or(`full_name.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .order('created_at', { ascending: false })
         .limit(10);
       
       if (error) throw error;
-      return data as MemberSearchResult[];
+
+      // Remove duplicates based on full_name
+      const uniqueMembers = data?.reduce((acc: MemberSearchResult[], current) => {
+        const exists = acc.find(item => item.full_name.toLowerCase() === current.full_name.toLowerCase());
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      return uniqueMembers as MemberSearchResult[];
     },
     enabled: searchTerm.length > 0,
   });
