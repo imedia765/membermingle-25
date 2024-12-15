@@ -3,16 +3,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Search } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
+import { MemberSearchInput } from "./MemberSearchInput";
+import { MemberSearchResults } from "./MemberSearchResults";
+import { Member } from "@/components/members/types";
 
 const paymentFormSchema = z.object({
   memberId: z.string().min(1, "Please select a member"),
@@ -90,6 +90,11 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const handleSelectMember = (member: Member) => {
+    form.setValue('memberId', member.id);
+    setSearchTerm(member.full_name);
+  };
+
   const handleAddPayment = (data: PaymentFormValues) => {
     addPaymentMutation.mutate(data);
   };
@@ -102,42 +107,23 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleAddPayment)} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Search Member</Label>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, or member number"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            
-            {members && members.length > 0 && (
-              <ScrollArea className="h-[200px] rounded-md border">
-                <div className="p-4 space-y-2">
-                  {members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                      onClick={() => {
-                        form.setValue('memberId', member.id);
-                        setSearchTerm(member.full_name);
-                      }}
-                    >
-                      <div>
-                        <p className="font-medium">{member.full_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {member.member_number} • {member.email}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+          <FormField
+            control={form.control}
+            name="memberId"
+            render={() => (
+              <FormItem>
+                <MemberSearchInput 
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                />
+                <MemberSearchResults 
+                  members={members}
+                  onSelectMember={handleSelectMember}
+                />
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
 
           <FormField
             control={form.control}
