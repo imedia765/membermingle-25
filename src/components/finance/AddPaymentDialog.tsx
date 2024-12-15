@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { MemberSearchInput } from "./MemberSearchInput";
 import { MemberSearchResults } from "./MemberSearchResults";
-import { Member } from "@/components/members/types";
+import { MemberSearchResult } from "./types";
 
 const paymentFormSchema = z.object({
   memberId: z.string().min(1, "Please select a member"),
@@ -48,7 +48,7 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
         .limit(10);
       
       if (error) throw error;
-      return data || [];
+      return data as MemberSearchResult[];
     },
     enabled: searchTerm.length > 0,
   });
@@ -90,7 +90,7 @@ export function AddPaymentDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
-  const handleSelectMember = (member: Member) => {
+  const handleSelectMember = (member: MemberSearchResult) => {
     form.setValue('memberId', member.id);
     setSearchTerm(member.full_name);
   };

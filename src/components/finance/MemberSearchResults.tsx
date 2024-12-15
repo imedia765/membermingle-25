@@ -1,9 +1,9 @@
-import { Member } from "@/components/members/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MemberSearchResult } from "./types";
 
 interface MemberSearchResultsProps {
-  members: Member[] | null;
-  onSelectMember: (member: Member) => void;
+  members: MemberSearchResult[] | null;
+  onSelectMember: (member: MemberSearchResult) => void;
 }
 
 export function MemberSearchResults({ members, onSelectMember }: MemberSearchResultsProps) {
