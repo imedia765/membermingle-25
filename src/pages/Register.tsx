@@ -73,11 +73,17 @@ export default function Register() {
 
       // Redirect to login page
       navigate("/login");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      
+      // Show a user-friendly error message
+      const errorMessage = error.message?.includes('rate limit') 
+        ? error.message 
+        : "An error occurred during registration. Please try again.";
+      
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "An error occurred during registration",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

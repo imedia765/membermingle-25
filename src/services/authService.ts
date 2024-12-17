@@ -18,29 +18,23 @@ export const signUpUser = async (email: string, password: string) => {
     if (error) {
       console.error("Sign up error:", error);
       
-      // Parse the error body if it's a string
+      // Check if the error response contains a JSON body
       let errorBody;
       try {
-        errorBody = typeof error.message === 'string' ? JSON.parse(error.message) : null;
+        errorBody = error.message && typeof error.message === 'string' 
+          ? JSON.parse(error.message) 
+          : null;
       } catch {
         errorBody = null;
       }
 
-      // Check for rate limit error in different possible locations
-      const isRateLimit = 
-        error.message?.includes('over_email_send_rate_limit') ||
-        errorBody?.code === 'over_email_send_rate_limit' ||
-        error.status === 429;
-
-      if (isRateLimit) {
-        // Try to extract wait time from various possible locations
-        let waitTimeMatch = 
-          error.message?.match(/after (\d+) seconds/) ||
-          errorBody?.message?.match(/after (\d+) seconds/);
-        
-        const waitTime = waitTimeMatch ? parseInt(waitTimeMatch[1]) : 60;
-        throw new Error(`Please wait ${waitTime} seconds before trying again.`);
+      // Handle rate limit error specifically
+      if (error.status === 429 || 
+          errorBody?.code === 'over_email_send_rate_limit' ||
+          error.message?.includes('rate limit')) {
+        throw new Error("Too many signup attempts. Please wait a few minutes before trying again.");
       }
+
       throw error;
     }
 
