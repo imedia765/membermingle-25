@@ -77,9 +77,15 @@ export default function Register() {
       console.error("Registration error:", error);
       
       // Show a user-friendly error message
-      const errorMessage = error.message?.includes('rate limit') 
-        ? error.message 
-        : "An error occurred during registration. Please try again.";
+      let errorMessage = "An error occurred during registration. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes('rate limit')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('already registered')) {
+          errorMessage = "This email is already registered. Please try logging in instead.";
+        }
+      }
       
       toast({
         title: "Registration failed",
