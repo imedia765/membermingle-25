@@ -22,9 +22,12 @@ export function CollectorCard({
   onUpdate 
 }: CollectorCardProps) {
   const isExpanded = expandedCollector === collector.id;
+  const memberCount = collector.members?.length || 0;
+  const statusText = collector.active ? "Active" : "Inactive";
+  const statusColor = collector.active ? "text-green-500" : "text-red-500";
 
   return (
-    <Card>
+    <Card className="bg-card">
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 min-w-0">
@@ -42,11 +45,14 @@ export function CollectorCard({
               )}
             </Button>
             <div className="min-w-0">
-              <h3 className="text-xl text-white truncate">
-                {collector.prefix}{collector.number} - {collector.name}
-              </h3>
-              <p className="text-sm text-white">
-                Members: {collector.members?.length || 0}
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl text-white truncate">
+                  {collector.prefix}{collector.number} - {collector.name}
+                </h3>
+                <span className={`text-sm ${statusColor}`}>({statusText})</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Members: {memberCount}
               </p>
             </div>
           </div>
@@ -58,27 +64,29 @@ export function CollectorCard({
           />
         </div>
       </CardHeader>
-      {isExpanded && collector.members && (
+      {isExpanded && collector.members && collector.members.length > 0 && (
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white">Name</TableHead>
                   <TableHead className="text-white">Member ID</TableHead>
+                  <TableHead className="text-white">Name</TableHead>
                   <TableHead className="text-white">Email</TableHead>
-                  <TableHead className="text-white">Contact Number</TableHead>
+                  <TableHead className="text-white">Phone</TableHead>
                   <TableHead className="text-white">Address</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {collector.members.map((member: any) => (
                   <TableRow key={member.id}>
+                    <TableCell className="text-white font-mono">{member.member_number}</TableCell>
                     <TableCell className="text-white">{member.full_name}</TableCell>
-                    <TableCell className="text-white">{member.member_number}</TableCell>
-                    <TableCell className="text-white">{member.email}</TableCell>
-                    <TableCell className="text-white">{member.phone}</TableCell>
-                    <TableCell className="text-white">{member.address}</TableCell>
+                    <TableCell className="text-white">{member.email || 'N/A'}</TableCell>
+                    <TableCell className="text-white">{member.phone || 'N/A'}</TableCell>
+                    <TableCell className="text-white">{member.address || 'N/A'}</TableCell>
+                    <TableCell className="text-white capitalize">{member.status || 'active'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

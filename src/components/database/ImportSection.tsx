@@ -1,33 +1,27 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { transformMemberForSupabase, transformCollectorForSupabase } from "@/utils/dataCleanup";
 import { supabase } from "@/integrations/supabase/client";
 import { ImportStatus } from "./ImportStatus";
+import { ImportButton } from "./ImportButton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { importMembersFromCsv } from "@/utils/csvImport";
-
-interface CsvData {
-  collector: string;
-  [key: string]: any;
-}
+import { processCollectors, processMembers } from "@/utils/importHelpers";
 
 export function ImportSection() {
   const { toast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [removeMemberNumbers, setRemoveMemberNumbers] = useState(false);
 
   useEffect(() => {
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsAuthenticated(!!session);
       console.log("Initial auth check:", { isAuthenticated: !!session, userId: session?.user?.id });
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -42,100 +36,6 @@ export function ImportSection() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const processCollectors = async (validData: CsvData[]) => {
-    if (!session?.user?.id) {
-      console.error("No authenticated user");
-      throw new Error("Authentication required");
-    }
-
-    const uniqueCollectors = [...new Set(validData.map(item => item.collector).filter(Boolean))];
-    console.log('Processing collectors:', uniqueCollectors);
-    
-    const collectorIdMap = new Map<string, string>();
-
-    for (const collectorName of uniqueCollectors) {
-      try {
-        const { data: existingCollectors, error: searchError } = await supabase
-          .from('collectors')
-          .select('id')
-          .eq('name', collectorName);
-
-        if (searchError) {
-          console.error('Error searching for collector:', searchError);
-          continue;
-        }
-
-        let collectorId: string;
-
-        if (!existingCollectors || existingCollectors.length === 0) {
-          const collectorData = await transformCollectorForSupabase(collectorName);
-          const { data: newCollector, error: insertError } = await supabase
-            .from('collectors')
-            .insert(collectorData)
-            .select('id')
-            .single();
-
-          if (insertError) {
-            console.error('Error inserting collector:', insertError);
-            continue;
-          }
-
-          collectorId = newCollector.id;
-          console.log('Created new collector:', { id: collectorId, name: collectorName });
-        } else {
-          collectorId = existingCollectors[0].id;
-          console.log('Using existing collector:', { id: collectorId, name: collectorName });
-        }
-
-        collectorIdMap.set(collectorName, collectorId);
-      } catch (error) {
-        console.error(`Error processing collector ${collectorName}:`, error);
-      }
-    }
-
-    return collectorIdMap;
-  };
-
-  const processMembers = async (validData: CsvData[], collectorIdMap: Map<string, string>) => {
-    if (!session?.user?.id) {
-      console.error("No authenticated user");
-      throw new Error("Authentication required");
-    }
-
-    console.log("Processing members with auth status:", isAuthenticated);
-
-    for (const member of validData) {
-      try {
-        if (!member.collector) continue;
-
-        const collectorId = collectorIdMap.get(member.collector);
-        if (!collectorId) {
-          console.error(`No collector ID found for ${member.collector}`);
-          continue;
-        }
-
-        const memberData = transformMemberForSupabase(member);
-        console.log("Inserting member data:", memberData);
-
-        const { error: memberError } = await supabase
-          .from('members')
-          .insert({
-            ...memberData,
-            collector_id: collectorId,
-            collector: member.collector,
-          });
-
-        if (memberError) {
-          console.error('Error inserting member:', memberError);
-          throw memberError;
-        }
-      } catch (error) {
-        console.error('Error processing member:', error);
-        throw error;
-      }
-    }
-  };
 
   const importData = async () => {
     if (!isAuthenticated) {
@@ -155,15 +55,22 @@ export function ImportSection() {
         throw new Error('Invalid CSV data format');
       }
       
-      const data = result as CsvData[];
-      console.log('CSV data loaded:', data);
+      console.log('CSV data loaded:', result.length, 'members');
 
-      const collectorIdMap = await processCollectors(data);
-      await processMembers(data, collectorIdMap);
+      // If removeMemberNumbers is true, remove member_number from each record
+      const processedData = removeMemberNumbers 
+        ? result.map(({ member_number, ...rest }) => rest)
+        : result;
+
+      const collectorIdMap = await processCollectors(processedData, session.user.id);
+      console.log('Collectors processed, starting member import...');
+      
+      const importedCount = await processMembers(processedData, collectorIdMap, session.user.id);
+      console.log('Members import completed:', importedCount, 'members processed');
 
       toast({
         title: "Import successful",
-        description: "Members have been imported into the database",
+        description: `${importedCount} members have been imported into the database`,
       });
     } catch (error) {
       console.error('Import error:', error);
@@ -188,14 +95,24 @@ export function ImportSection() {
           Import member data from processed_members.csv file into the database.
           This will create new records and update existing ones.
         </p>
-        <Button 
-          onClick={importData} 
-          disabled={isImporting || !isAuthenticated}
-          className="w-full flex items-center gap-2"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          {isImporting ? "Importing..." : "Import Members"}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="removeMemberNumbers"
+            checked={removeMemberNumbers}
+            onCheckedChange={(checked) => setRemoveMemberNumbers(checked as boolean)}
+          />
+          <label
+            htmlFor="removeMemberNumbers"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Remove existing member numbers and let Supabase generate new ones
+          </label>
+        </div>
+        <ImportButton 
+          onClick={importData}
+          isImporting={isImporting}
+          isDisabled={!isAuthenticated}
+        />
       </CardContent>
     </Card>
   );
