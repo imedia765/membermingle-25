@@ -18,34 +18,37 @@ export const signUpUser = async (email: string, password: string) => {
     if (error) {
       console.error("Sign up error:", error);
       
-      // Check for rate limit error in multiple places
-      if (error.status === 429 || 
-          error.message?.includes('rate limit') || 
-          error.message?.includes('over_email_send_rate_limit')) {
+      // Handle rate limit errors
+      if (error.status === 429) {
         throw new Error("Too many registration attempts. Please try again in a few minutes.");
       }
 
-      // Handle other known error cases
+      // Handle already registered users
       if (error.message?.includes('already registered')) {
         throw new Error("This email is already registered. Please try logging in instead.");
       }
 
-      // For unknown errors, throw a generic message
+      // For other errors, throw a generic message
       throw new Error("Registration failed. Please try again later.");
     }
 
     console.log("Sign up successful:", data);
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Sign up error:", error);
-    throw error;
+    // Re-throw the error with the custom message if it's one of our handled cases
+    if (error.message?.includes('Too many registration attempts') ||
+        error.message?.includes('already registered')) {
+      throw error;
+    }
+    // For unexpected errors, throw a generic message
+    throw new Error("Registration failed. Please try again later.");
   }
 };
 
 export const createUserProfile = async (userId: string, email: string) => {
   console.log("Creating user profile for:", userId);
   
-  // First, get the current session to ensure we're authenticated
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
   if (sessionError || !session) {
