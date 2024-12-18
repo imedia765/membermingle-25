@@ -18,9 +18,17 @@ export const signUpUser = async (email: string, password: string) => {
     if (error) {
       console.error("Sign up error:", error);
       
-      // Handle rate limit errors
-      if (error.status === 429) {
-        throw new Error("Too many registration attempts. Please try again in a few minutes.");
+      // Parse error body if it exists
+      let errorBody;
+      try {
+        errorBody = error.message && JSON.parse(error.message);
+      } catch {
+        // If parsing fails, errorBody will remain undefined
+      }
+
+      // Check for rate limit in both error status and parsed body
+      if (error.status === 429 || errorBody?.code === "over_email_send_rate_limit") {
+        throw new Error("You've reached the maximum number of registration attempts. Please wait a few minutes before trying again.");
       }
 
       // Handle already registered users
@@ -36,11 +44,13 @@ export const signUpUser = async (email: string, password: string) => {
     return data;
   } catch (error: any) {
     console.error("Sign up error:", error);
-    // Re-throw the error with the custom message if it's one of our handled cases
-    if (error.message?.includes('Too many registration attempts') ||
+    
+    // Re-throw specific error messages we created
+    if (error.message?.includes('maximum number of registration attempts') ||
         error.message?.includes('already registered')) {
       throw error;
     }
+    
     // For unexpected errors, throw a generic message
     throw new Error("Registration failed. Please try again later.");
   }
