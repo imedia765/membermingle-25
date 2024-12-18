@@ -41,22 +41,6 @@ export default function Register() {
         throw new Error("Failed to create user account");
       }
 
-      // Wait for session to be established (max 10 seconds)
-      let session = null;
-      let attempts = 0;
-      while (!session && attempts < 10) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        session = sessionData.session;
-        if (!session) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
-        }
-      }
-
-      if (!session) {
-        throw new Error("Failed to establish session after multiple attempts");
-      }
-
       // Step 2: Create user profile
       await createUserProfile(authData.user.id, data.email);
 

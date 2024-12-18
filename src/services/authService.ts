@@ -28,7 +28,6 @@ export const signUpUser = async (email: string, password: string) => {
         throw new Error("This email is already registered. Please try logging in instead.");
       }
 
-      // For other errors, throw the original error message
       throw error;
     }
 
@@ -103,40 +102,86 @@ export const createMember = async (memberData: any, collectorId: string) => {
     updated_at: new Date().toISOString()
   };
 
-  const { data, error } = await supabase
-    .from('members')
-    .insert(memberObject)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .insert(memberObject)
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Member creation error:", error);
+    if (error) {
+      console.error("Member creation error:", error);
+      throw error;
+    }
+
+    console.log("Member created successfully:", data);
+    return data;
+  } catch (error) {
+    console.error("Error creating member:", error);
     throw error;
   }
-
-  console.log("Member created successfully:", data);
-  return data;
 };
 
 export const createRegistration = async (memberId: string) => {
   console.log("Creating registration for member:", memberId);
   
-  const { data, error } = await supabase
-    .from('registrations')
-    .insert({
-      member_id: memberId,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('registrations')
+      .insert({
+        member_id: memberId,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Registration creation error:", error);
+    if (error) {
+      console.error("Registration creation error:", error);
+      throw error;
+    }
+
+    console.log("Registration created successfully:", data);
+    return data;
+  } catch (error) {
+    console.error("Error creating registration:", error);
     throw error;
   }
+};
 
-  console.log("Registration created successfully:", data);
-  return data;
+export const updateMemberProfile = async (memberId: string, profileData: any) => {
+  console.log("Updating member profile:", { memberId, profileData });
+
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .update({
+        full_name: profileData.fullName,
+        email: profileData.email,
+        phone: profileData.mobile,
+        address: profileData.address,
+        town: profileData.town,
+        postcode: profileData.postCode,
+        date_of_birth: profileData.dob,
+        gender: profileData.gender,
+        marital_status: profileData.maritalStatus,
+        profile_updated: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', memberId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Profile update error:", error);
+      throw error;
+    }
+
+    console.log("Profile updated successfully:", data);
+    return data;
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    throw error;
+  }
 };
