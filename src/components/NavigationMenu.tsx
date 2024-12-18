@@ -4,7 +4,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Menu, User, Users, Shield } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState, useEffect } from "react";
-import { supabase } from "../integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
 import { Badge } from "./ui/badge";
 
@@ -26,14 +26,21 @@ export function NavigationMenu() {
         setIsLoggedIn(!!session);
         
         if (session) {
-          // Fetch user role from profiles table
+          // Fetch user role from profiles table using the correct column name
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('role')
-            .eq('user_id', session.user.id)
+            .eq('id', session.user.id)
             .single();
             
-          if (!profileError && profileData) {
+          if (profileError) {
+            if (profileError.code === 'PGRST116') {
+              console.log("No profile found for user");
+              setUserRole('member'); // Default to member if no profile exists
+            } else {
+              console.error("Profile fetch error:", profileError);
+            }
+          } else if (profileData) {
             setUserRole(profileData.role);
           }
         }
@@ -50,13 +57,19 @@ export function NavigationMenu() {
       if (event === "SIGNED_IN" && session) {
         setIsLoggedIn(true);
         // Fetch user role when signed in
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role')
-          .eq('user_id', session.user.id)
+          .eq('id', session.user.id)
           .single();
           
-        if (profileData) {
+        if (profileError) {
+          if (profileError.code === 'PGRST116') {
+            setUserRole('member'); // Default to member if no profile exists
+          } else {
+            console.error("Profile fetch error:", profileError);
+          }
+        } else if (profileData) {
           setUserRole(profileData.role);
         }
         
