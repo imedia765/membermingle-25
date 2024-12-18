@@ -10,7 +10,7 @@ import { DependantsSection } from "@/components/registration/DependantsSection";
 import { MembershipSection } from "@/components/registration/MembershipSection";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { signUpUser, createUserProfile, createMember, createRegistration } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,11 +20,18 @@ export default function Register() {
   const { register, handleSubmit, setValue, watch } = useForm();
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const spousesSectionRef = useRef<any>(null);
+  const dependantsSectionRef = useRef<any>(null);
 
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
-      console.log("Starting registration process with data:", { ...data, collectorId: selectedCollectorId });
+      console.log("Starting registration process with data:", { 
+        ...data, 
+        collectorId: selectedCollectorId,
+        spouses: spousesSectionRef.current?.getSpouses(),
+        dependants: dependantsSectionRef.current?.getDependants()
+      });
 
       if (!selectedCollectorId) {
         toast({
@@ -44,8 +51,12 @@ export default function Register() {
       // Step 2: Create user profile
       await createUserProfile(authData.user.id, data.email);
 
-      // Step 3: Create member record
-      const member = await createMember(data, selectedCollectorId);
+      // Step 3: Create member record with family members
+      const member = await createMember({
+        ...data,
+        spouses: spousesSectionRef.current?.getSpouses(),
+        dependants: dependantsSectionRef.current?.getDependants()
+      }, selectedCollectorId);
 
       // Step 4: Create registration record
       await createRegistration(member.id);
@@ -102,8 +113,8 @@ export default function Register() {
             <div className="space-y-8 divide-y divide-gray-200">
               <PersonalInfoSection register={register} setValue={setValue} watch={watch} />
               <NextOfKinSection />
-              <SpousesSection />
-              <DependantsSection />
+              <SpousesSection ref={spousesSectionRef} />
+              <DependantsSection ref={dependantsSectionRef} />
               <MembershipSection onCollectorChange={setSelectedCollectorId} />
             </div>
             
