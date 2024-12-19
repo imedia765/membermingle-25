@@ -8,7 +8,7 @@ export const createOrUpdateMember = async (
 ) => {
   console.log("Creating/updating member with data:", { memberId, data, collectorId });
   
-  const memberData: TablesInsert<'members'> = {
+  const memberData: Partial<TablesInsert<'members'>> = {
     collector_id: collectorId,
     full_name: data.fullName,
     email: data.email,
