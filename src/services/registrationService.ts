@@ -5,8 +5,8 @@ type RequiredMemberFields = {
   full_name: string;
 };
 
-// Create a type for member insert that includes all fields
-type MemberData = Omit<TablesInsert<'members'>, 'member_number'> & RequiredMemberFields;
+// Create a type that matches exactly what Supabase expects for member inserts
+type MemberInsertData = TablesInsert<'members'>;
 
 export const createOrUpdateMember = async (
   memberId: string | undefined,
@@ -19,7 +19,7 @@ export const createOrUpdateMember = async (
     throw new Error('Full name is required');
   }
 
-  const memberData: MemberData = {
+  const memberData: Partial<MemberInsertData> = {
     full_name: data.fullName,
     collector_id: collectorId,
     email: data.email,
