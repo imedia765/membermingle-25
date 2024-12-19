@@ -41,16 +41,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("Initial session check:", session);
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        setIsAuthenticated(!!session);
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setIsAuthenticated(false);
+          setUserRole(null);
+          return;
+        }
+
+        if (!session) {
+          setIsAuthenticated(false);
+          setUserRole(null);
+          return;
+        }
+
+        setIsAuthenticated(true);
         
-        if (session?.user) {
+        if (session.user) {
           const role = await fetchUserRole(session.user.id);
           setUserRole(role);
-        } else {
-          setUserRole(null);
         }
       } catch (error) {
         console.error('Error checking auth:', error);
@@ -64,6 +74,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session);
       
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setIsAuthenticated(false);
+        setUserRole(null);
+        navigate('/login');
+        return;
+      }
+
       setIsAuthenticated(!!session);
       
       if (session?.user) {
@@ -77,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     try {
