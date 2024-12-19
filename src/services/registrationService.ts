@@ -43,6 +43,7 @@ export const createOrUpdateMember = async (
       .insert({
         ...memberData,
         status: 'pending',
+        verified: false
       })
       .select()
       .single();
