@@ -10,7 +10,7 @@ export const createOrUpdateMember = async (
   
   const memberData: Partial<TablesInsert<'members'>> = {
     collector_id: collectorId,
-    full_name: data.fullName,
+    full_name: data.fullName, // Ensure this is included as it's required
     email: data.email,
     phone: data.mobile,
     address: data.address,
@@ -42,8 +42,7 @@ export const createOrUpdateMember = async (
       .from('members')
       .insert({
         ...memberData,
-        status: 'pending',
-        verified: false
+        verified: false,
       })
       .select()
       .single();
