@@ -27,7 +27,7 @@ export type Member = {
     gender?: string | null
     id?: string
     marital_status?: string | null
-    member_number?: string  // Made optional
+    member_number: string
     phone?: string | null
     postcode?: string | null
     status?: string | null

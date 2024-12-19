@@ -11,40 +11,37 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
     const password = formData.get("password") as string;
 
     try {
+      console.log("Attempting email login for:", email);
+      
+      // First check if this is a valid member email
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('id, email_verified, profile_updated')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (memberError) {
+        console.error("Member lookup error:", memberError);
+        throw new Error("Error looking up member details");
+      }
+
+      if (!memberData) {
+        console.error("No member found with email:", email);
+        throw new Error("No member found with this email address. Please check your credentials or use the Member ID login if you haven't updated your profile yet.");
+      }
+
+      // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-
-      // Check if user has a profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error checking profile:', profileError);
-        throw profileError;
+      if (error) {
+        console.error("Sign in error:", error);
+        throw error;
       }
 
-      // If no profile exists, create one with default role
-      if (!profile) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            role: 'member',
-          });
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-          throw insertError;
-        }
-      }
+      console.log("Login successful:", data);
 
       toast({
         title: "Login successful",
@@ -64,88 +61,57 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
   const handleMemberIdSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const memberId = formData.get("memberId") as string;
-    const password = formData.get("password") as string;
+    const memberId = (formData.get("memberId") as string).toUpperCase().trim();
+    const password = formData.get("memberPassword") as string;
 
     try {
-      // First, check if member exists in members table
+      console.log("Attempting member ID login for:", memberId);
+      
+      // First, get the member details
       const { data: member, error: memberError } = await supabase
         .from('members')
-        .select('*')
-        .eq('member_number', memberId.toUpperCase())
-        .single();
+        .select('email, default_password_hash')
+        .eq('member_number', memberId)
+        .maybeSingle();
 
       if (memberError) {
-        throw new Error("Member ID not found");
+        console.error("Member lookup error:", memberError);
+        throw new Error("Error looking up member details");
       }
 
-      // Use existing email if available, otherwise create a temporary one
-      const email = member.email || `${memberId.toLowerCase()}@temp.pwaburton.org`;
+      if (!member) {
+        console.error("No member found with ID:", memberId);
+        throw new Error("Invalid Member ID. Please check your credentials and try again.");
+      }
 
-      // Try to sign in first (in case they already have an account)
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      if (!member.email) {
+        console.error("No email found for member:", memberId);
+        throw new Error("No email associated with this Member ID. Please contact support.");
+      }
+
+      // Attempt to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: member.email,
+        password: password,
       });
 
-      if (signInError && signInError.message.includes('Invalid login')) {
-        // If login fails, this might be their first time, so create an account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              member_number: memberId,
-            },
-          },
-        });
-
-        if (signUpError) throw signUpError;
-
-        // Create or update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: signUpData.user!.id,
-            email,
-            role: 'member',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-
-        if (profileError) throw profileError;
-
-        // Update member record with email if needed
-        if (!member.email) {
-          const { error: updateError } = await supabase
-            .from('members')
-            .update({ 
-              email,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('member_number', memberId);
-
-          if (updateError) throw updateError;
-        }
-
-        toast({
-          title: "Account created",
-          description: "Your account has been created successfully. You can now log in.",
-        });
-      } else {
-        // Successful login
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
+      if (signInError) {
+        console.error("Sign in error:", signInError);
+        throw signInError;
       }
 
+      console.log("Login successful for member:", memberId);
+
+      toast({
+        title: "Login successful",
+        description: "Welcome! Please update your profile information.",
+      });
       setIsLoggedIn(true);
     } catch (error) {
       console.error("Member ID login error:", error);
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid member ID or password",
+        description: error instanceof Error ? error.message : "Invalid Member ID or password",
         variant: "destructive",
       });
     }
@@ -153,32 +119,6 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
 
   return {
     handleEmailSubmit,
-    handleGoogleLogin: async () => {
-      console.log("Google login attempt started");
-      try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin + "/admin",
-          },
-        });
-
-        console.log("Google login response:", { data, error });
-        if (error) throw error;
-        
-        toast({
-          title: "Redirecting to Google",
-          description: "Please wait while we redirect you to Google sign-in...",
-        });
-      } catch (error) {
-        console.error("Google login error:", error);
-        toast({
-          title: "Login failed",
-          description: error instanceof Error ? error.message : "An error occurred during Google login",
-          variant: "destructive",
-        });
-      }
-    },
     handleMemberIdSubmit,
   };
 };

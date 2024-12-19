@@ -71,21 +71,12 @@ export function MemberCard({
 
     setIsLoading(true);
     try {
-      // First check if there are any related records in family_members
-      const { data: familyMembers, error: familyError } = await supabase
-        .from('family_members')
-        .delete()
-        .eq('member_id', member.id);
-
-      if (familyError) throw familyError;
-
-      // Then delete the member
-      const { error: memberError } = await supabase
+      const { error } = await supabase
         .from('members')
         .delete()
         .eq('id', member.id);
 
-      if (memberError) throw memberError;
+      if (error) throw error;
 
       toast({
         title: "Member Removed",
@@ -93,11 +84,11 @@ export function MemberCard({
       });
       
       onUpdate?.();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting member:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to remove member",
+        description: "Failed to remove member",
         variant: "destructive",
       });
     } finally {
@@ -114,16 +105,12 @@ export function MemberCard({
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold text-white">{member.full_name}</h3>
-          <div className="flex flex-col gap-1 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-primary">Member ID:</span>
-              <span className="font-mono bg-primary/10 px-2 py-0.5 rounded">{member.member_number}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <span className={statusColor}>
-                {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Unknown'}
-              </span>
-            </div>
+          <div className="flex gap-2 text-sm text-gray-400">
+            <span>Member ID: {member.member_number}</span>
+            <span>•</span>
+            <span className={statusColor}>
+              {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Unknown'}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
