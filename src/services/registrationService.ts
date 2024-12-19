@@ -13,10 +13,28 @@ export const createOrUpdateMember = async (
 ) => {
   console.log("Creating/updating member with data:", { memberId, data, collectorId });
   
-  if (!data.fullName) {
-    throw new Error('Full name is required');
+  // For new registrations only
+  if (!memberId && !data.fullName) {
+    throw new Error('Full name is required for new registrations');
   }
 
+  // If this is a member login (has memberId), return early
+  if (memberId) {
+    const { data: existingMember, error: fetchError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching existing member:", fetchError);
+      throw fetchError;
+    }
+
+    return existingMember;
+  }
+
+  // Continue with new registration
   const memberData: MemberInsertData = {
     full_name: data.fullName,
     collector_id: collectorId,
@@ -37,7 +55,7 @@ export const createOrUpdateMember = async (
     const { data: updatedMember, error } = await supabase
       .from('members')
       .update(memberData)
-      .eq('member_number', memberId)
+      .eq('id', memberId)
       .select()
       .single();
 
