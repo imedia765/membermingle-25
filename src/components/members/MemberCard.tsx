@@ -114,12 +114,16 @@ export function MemberCard({
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold text-white">{member.full_name}</h3>
-          <div className="flex gap-2 text-sm text-gray-400">
-            <span>Member ID: {member.member_number}</span>
-            <span>•</span>
-            <span className={statusColor}>
-              {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Unknown'}
-            </span>
+          <div className="flex flex-col gap-1 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-primary">Member ID:</span>
+              <span className="font-mono bg-primary/10 px-2 py-0.5 rounded">{member.member_number}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <span className={statusColor}>
+                {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Unknown'}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -166,7 +170,6 @@ export function MemberCard({
 
       {expandedMember === member.id && (
         <div className="mt-4 space-y-2 text-gray-300">
-          <p>Member Number: {member.member_number}</p>
           <p>Email: {member.email || "N/A"}</p>
           <p>Phone: {member.phone || "N/A"}</p>
           <p>Address: {member.address || "N/A"}</p>

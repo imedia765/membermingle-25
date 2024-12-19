@@ -79,7 +79,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         throw new Error("Member ID not found");
       }
 
-      // If member exists but no email, create a temporary one
+      // Use existing email if available, otherwise create a temporary one
       const email = member.email || `${memberId.toLowerCase()}@temp.pwaburton.org`;
 
       // Try to sign in first (in case they already have an account)
