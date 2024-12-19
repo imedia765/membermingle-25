@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Token refreshed successfully');
       }
 
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUserRole(null);
         navigate('/login');
