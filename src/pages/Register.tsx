@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -10,18 +11,17 @@ import { DependantsSection } from "@/components/registration/DependantsSection";
 import { MembershipSection } from "@/components/registration/MembershipSection";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
-import { useState, useRef } from "react";
-import { signUpUser, createUserProfile, createMember, createRegistration } from "@/services/authService";
+import { signUpUser, createMember, createRegistration } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { register, handleSubmit, setValue, watch } = useForm();
-  const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const spousesSectionRef = useRef<any>(null);
   const dependantsSectionRef = useRef<any>(null);
+  const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
 
   const onSubmit = async (data: any) => {
     try {
@@ -42,49 +42,51 @@ export default function Register() {
         return;
       }
 
-      // Step 1: Create auth user and wait for session
-      const authData = await signUpUser(data.email, data.password);
-      if (!authData.user) {
-        throw new Error("Failed to create user account");
-      }
-
-      // Step 2: Create user profile
-      await createUserProfile(authData.user.id, data.email);
-
-      // Step 3: Create member record with family members
+      // Step 1: Create member record with family members first
       const member = await createMember({
         ...data,
         spouses: spousesSectionRef.current?.getSpouses(),
         dependants: dependantsSectionRef.current?.getDependants()
       }, selectedCollectorId);
 
-      // Step 4: Create registration record
+      // Step 2: Create registration record
       await createRegistration(member.id);
+
+      // Step 3: Create auth user and sign them in
+      const authData = await signUpUser(data.email, data.password);
+      if (!authData.user) {
+        throw new Error("Failed to create user account");
+      }
+
+      // Step 4: Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: data.email,
+          role: 'member',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        // Continue with registration even if profile creation fails
+        // The profile can be created later when the user logs in
+      }
 
       toast({
         title: "Registration successful",
-        description: "Your registration has been submitted and is pending approval.",
+        description: "Your registration has been submitted. Please check your email to confirm your account.",
       });
 
       // Redirect to login page
       navigate("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
-      
-      // Show a user-friendly error message
-      let errorMessage = "An error occurred during registration. Please try again.";
-      
-      if (error.message) {
-        if (error.message.includes('rate limit')) {
-          errorMessage = error.message;
-        } else if (error.message.includes('already registered')) {
-          errorMessage = "This email is already registered. Please try logging in instead.";
-        }
-      }
-      
       toast({
         title: "Registration failed",
-        description: errorMessage,
+        description: error.message || "An unexpected error occurred during registration",
         variant: "destructive",
       });
     } finally {
