@@ -1,12 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesInsert } from "@/integrations/supabase/types";
 
-type RequiredMemberFields = {
-  full_name: string;
-};
-
-// Create a type that matches exactly what Supabase expects for member inserts
+// Define the base member type from Supabase
 type MemberInsertData = TablesInsert<'members'>;
+
+// Create a type for the required fields
+type RequiredMemberFields = Pick<MemberInsertData, 'full_name'>;
+
+// Create a type for optional fields
+type OptionalMemberFields = Omit<MemberInsertData, keyof RequiredMemberFields | 'member_number'>;
 
 export const createOrUpdateMember = async (
   memberId: string | undefined,
@@ -19,7 +21,7 @@ export const createOrUpdateMember = async (
     throw new Error('Full name is required');
   }
 
-  const memberData: Partial<MemberInsertData> = {
+  const memberData: RequiredMemberFields & Partial<OptionalMemberFields> = {
     full_name: data.fullName,
     collector_id: collectorId,
     email: data.email,
