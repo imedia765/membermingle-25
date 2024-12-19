@@ -52,6 +52,13 @@ export const PersonalInfoSection = ({ register, setValue, watch }: PersonalInfoP
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Personal Information</h3>
+      {state?.memberId && (
+        <div className="p-4 bg-primary/5 rounded-lg">
+          <p className="text-sm font-medium text-primary">
+            Member Number: <span className="font-bold">{state.memberId}</span>
+          </p>
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="fullName">Full Name</label>

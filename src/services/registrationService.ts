@@ -1,22 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-
-export const createAuthUser = async (email: string, password: string) => {
-  console.log("Creating auth user for:", email);
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/admin`,
-    },
-  });
-  
-  if (error) {
-    console.error("Auth creation error:", error);
-    throw error;
-  }
-  
-  return data;
-};
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 export const createOrUpdateMember = async (
   memberId: string | undefined,
@@ -25,7 +8,7 @@ export const createOrUpdateMember = async (
 ) => {
   console.log("Creating/updating member with data:", { memberId, data, collectorId });
   
-  const memberData = {
+  const memberData: TablesInsert<'members'> = {
     collector_id: collectorId,
     full_name: data.fullName,
     email: data.email,
@@ -37,7 +20,8 @@ export const createOrUpdateMember = async (
     gender: data.gender,
     marital_status: data.maritalStatus,
     profile_updated: true,
-    email_verified: false
+    email_verified: false,
+    member_number: memberId || '', // Will be auto-generated if new member
   };
 
   let member;
@@ -108,6 +92,20 @@ export const createOrUpdateMember = async (
     }
   }
 
+  // Create or update registration record
+  const { error: registrationError } = await supabase
+    .from('registrations')
+    .upsert({
+      member_id: member.id,
+      status: memberId ? 'updated' : 'pending',
+      updated_at: new Date().toISOString()
+    });
+
+  if (registrationError) {
+    console.error("Error saving registration:", registrationError);
+    throw registrationError;
+  }
+
   return member;
 };
 
@@ -131,7 +129,7 @@ export const createOrUpdateRegistration = async (memberId: string, isNew: boolea
     .from('registrations')
     .upsert({
       member_id: memberId,
-      status: isNew ? 'pending' : 'completed',
+      status: isNew ? 'pending' : 'updated',
       updated_at: new Date().toISOString()
     });
 
