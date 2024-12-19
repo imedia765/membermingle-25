@@ -8,9 +8,13 @@ export const createOrUpdateMember = async (
 ) => {
   console.log("Creating/updating member with data:", { memberId, data, collectorId });
   
+  if (!data.fullName) {
+    throw new Error('Full name is required');
+  }
+
   const memberData: Partial<TablesInsert<'members'>> = {
     collector_id: collectorId,
-    full_name: data.fullName, // Ensure this is included as it's required
+    full_name: data.fullName,
     email: data.email,
     phone: data.mobile,
     address: data.address,
@@ -40,10 +44,7 @@ export const createOrUpdateMember = async (
   } else {
     const { data: newMember, error } = await supabase
       .from('members')
-      .insert({
-        ...memberData,
-        verified: false,
-      })
+      .insert(memberData)
       .select()
       .single();
 
