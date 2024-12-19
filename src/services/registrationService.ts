@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesInsert } from "@/integrations/supabase/types";
 
+type RequiredMemberFields = {
+  full_name: string;
+};
+
+type OptionalMemberFields = Omit<TablesInsert<'members'>, keyof RequiredMemberFields>;
+
 export const createOrUpdateMember = async (
   memberId: string | undefined,
   data: any,
@@ -12,9 +18,9 @@ export const createOrUpdateMember = async (
     throw new Error('Full name is required');
   }
 
-  const memberData: Partial<TablesInsert<'members'>> = {
-    collector_id: collectorId,
+  const memberData: RequiredMemberFields & Partial<OptionalMemberFields> = {
     full_name: data.fullName,
+    collector_id: collectorId,
     email: data.email,
     phone: data.mobile,
     address: data.address,
@@ -95,20 +101,6 @@ export const createOrUpdateMember = async (
       console.error("Error saving dependants:", dependantsError);
       throw dependantsError;
     }
-  }
-
-  // Create or update registration record
-  const { error: registrationError } = await supabase
-    .from('registrations')
-    .upsert({
-      member_id: member.id,
-      status: memberId ? 'updated' : 'pending',
-      updated_at: new Date().toISOString()
-    });
-
-  if (registrationError) {
-    console.error("Error saving registration:", registrationError);
-    throw registrationError;
   }
 
   return member;
