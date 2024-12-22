@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,6 @@ interface TransactionsTableProps {
 
 export function TransactionsTable({ type = 'all' }: TransactionsTableProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
   const { data: transactions, isLoading, refetch } = useQuery({
     queryKey: ['transactions', type],
     queryFn: async () => {
@@ -87,15 +85,7 @@ export function TransactionsTable({ type = 'all' }: TransactionsTableProps) {
         description: "The payment has been successfully approved.",
       });
 
-      // Invalidate and refetch all relevant queries
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['currentMonth'] }),
-        queryClient.invalidateQueries({ queryKey: ['previousMonth'] }),
-      ]);
-      
-      console.log('Refreshing all finance-related queries...');
+      refetch();
     } catch (error) {
       console.error('Error approving payment:', error);
       toast({

@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, UserCheck, ClipboardList, Database, DollarSign, UserCircle, ChevronDown, HeadsetIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -7,6 +7,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
+import { useEffect, useState } from "react";
+import { supabase } from "../integrations/supabase/client";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/admin" },
@@ -20,6 +22,39 @@ const menuItems = [
 ];
 
 export function AdminLayout() {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      setLoading(false);
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isLoggedIn) {
+    navigate("/login");
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col w-full bg-background">
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,13 +73,11 @@ export function AdminLayout() {
               {menuItems.map((item) => (
                 <DropdownMenuItem
                   key={item.to}
-                  asChild
+                  onClick={() => navigate(item.to)}
                   className="flex items-center gap-3 cursor-pointer py-3 px-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 text-base"
                 >
-                  <Link to={item.to} className="flex items-center gap-3">
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                  </Link>
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

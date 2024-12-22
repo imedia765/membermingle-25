@@ -375,7 +375,7 @@ export type Database = {
           phone: string | null
           postcode: string | null
           profile_completed: boolean | null
-          role: Database["public"]["Enums"]["user_role"]
+          role: Database["public"]["Enums"]["user_role"] | null
           town: string | null
           updated_at: string
           user_id: string | null
@@ -393,7 +393,7 @@ export type Database = {
           phone?: string | null
           postcode?: string | null
           profile_completed?: boolean | null
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           town?: string | null
           updated_at?: string
           user_id?: string | null
@@ -411,7 +411,7 @@ export type Database = {
           phone?: string | null
           postcode?: string | null
           profile_completed?: boolean | null
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           town?: string | null
           updated_at?: string
           user_id?: string | null
