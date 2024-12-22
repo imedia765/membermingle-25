@@ -16,7 +16,7 @@ import Database from "./pages/admin/Database";
 import Registrations from "./pages/admin/Registrations";
 import CoveredMembers from "./pages/admin/CoveredMembers";
 
-export function AppRoutes() {
+export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
@@ -25,8 +25,6 @@ export function AppRoutes() {
       <Route path="/terms" element={<TermsAndConditions />} />
       <Route path="/collector-responsibilities" element={<CollectorResponsibilities />} />
       <Route path="/medical-examiner-process" element={<MedicalExaminerProcess />} />
-      
-      {/* Admin routes */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="members" element={<Members />} />
