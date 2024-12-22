@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { User } from "@supabase/supabase-js";
 
 export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
   const { toast } = useToast();
@@ -33,10 +34,15 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       console.log("Attempting login with:", tempEmail);
 
       // Check if auth user exists
-      const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers();
-      const existingUser = users?.find(u => u.email === tempEmail);
+      const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers<User[]>();
+      if (getUserError) {
+        console.error('Error fetching users:', getUserError);
+        throw new Error("Error checking user status. Please try again later.");
+      }
 
-      let authUser;
+      const existingUser = users?.find((u: User) => u.email === tempEmail);
+
+      let authUser: User | null = null;
       if (!existingUser) {
         console.log("Creating new auth user");
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
