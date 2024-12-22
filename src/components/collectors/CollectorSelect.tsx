@@ -1,31 +1,30 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CollectorSelectProps {
-  collectors: Array<{ id: string; name: string }>;
-  currentCollectorId: string;
-  selectedCollectorId: string;
+  collectors: any[];
+  selectedCollector: string;
   onCollectorChange: (value: string) => void;
+  className?: string;
 }
 
 export function CollectorSelect({
   collectors,
-  currentCollectorId,
-  selectedCollectorId,
-  onCollectorChange
+  selectedCollector,
+  onCollectorChange,
+  className = ""
 }: CollectorSelectProps) {
   return (
-    <Select onValueChange={onCollectorChange} value={selectedCollectorId}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select a collector" />
+    <Select value={selectedCollector} onValueChange={onCollectorChange}>
+      <SelectTrigger className={`bg-[#F1F0FB] border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${className}`}>
+        <SelectValue placeholder="Select collector" />
       </SelectTrigger>
       <SelectContent>
-        {collectors
-          .filter(c => c.id !== currentCollectorId)
-          .map(c => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
+        <SelectItem value="all">All Collectors</SelectItem>
+        {collectors.map((collector) => (
+          <SelectItem key={collector.id} value={collector.id}>
+            {collector.name}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
