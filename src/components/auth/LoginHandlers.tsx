@@ -33,44 +33,43 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       const tempEmail = `${memberId.toLowerCase()}@temp.pwaburton.org`;
       console.log("Attempting login with:", tempEmail);
 
-      // Check if auth user exists
-      const { data, error: getUserError } = await supabase.auth.admin.listUsers();
-      if (getUserError) {
-        console.error('Error fetching users:', getUserError);
-        throw new Error("Error checking user status. Please try again later.");
-      }
+      // Ensure password meets minimum length requirement
+      const minPasswordLength = 6;
+      const actualPassword = password.length < minPasswordLength ? password.padEnd(minPasswordLength, password) : password;
 
-      const existingUser = data.users.find((u: User) => u.email === tempEmail);
+      // Try to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: tempEmail,
+        password: actualPassword,
+      });
 
-      let authUser: User | null = null;
-      if (!existingUser) {
-        console.log("Creating new auth user");
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        
+        // If login fails, try to sign up
+        console.log("Attempting signup for new user");
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: tempEmail,
-          password: password,
+          password: actualPassword,
         });
 
         if (signUpError) {
           console.error('Sign up error:', signUpError);
           throw new Error("Failed to create account. Please try again.");
         }
-        authUser = signUpData.user;
+
+        if (!signUpData.user) {
+          throw new Error("Failed to create account. Please try again.");
+        }
       }
 
-      // Try to sign in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      // Try signing in again after potential signup
+      const { data: finalSignInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
-        password: password,
+        password: actualPassword,
       });
 
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        throw new Error("Invalid Member ID or password. Please try again.");
-      }
-
-      authUser = signInData.user;
-
-      if (!authUser) {
+      if (finalSignInError || !finalSignInData.user) {
         throw new Error("Login failed. Please try again.");
       }
 
@@ -79,7 +78,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         const { error: updateError } = await supabase
           .from('members')
           .update({ 
-            auth_user_id: authUser.id,
+            auth_user_id: finalSignInData.user.id,
             email_verified: true,
             profile_updated: true
           })
