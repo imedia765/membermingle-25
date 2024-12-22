@@ -26,7 +26,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         throw new Error("Invalid Member ID. Please check your credentials and try again.");
       }
 
-      // Attempt to sign in with the temp email
+      // Generate temp email for auth
       const tempEmail = `${memberId.toLowerCase()}@temp.pwaburton.org`;
       console.log("Attempting login with:", tempEmail);
       
@@ -37,14 +37,15 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
 
       if (signInError) {
         console.error('Sign in error:', signInError);
-        if (signInError.message.includes('Invalid login credentials')) {
-          throw new Error("Invalid Member ID or password. Please try again.");
-        }
-        throw signInError;
+        throw new Error("Invalid Member ID or password. Please try again.");
+      }
+
+      if (!data.user) {
+        throw new Error("Login failed. Please try again.");
       }
 
       // Update auth_user_id if not set
-      if (!member.auth_user_id && data.user) {
+      if (!member.auth_user_id) {
         const { error: updateError } = await supabase
           .from('members')
           .update({ 
@@ -59,18 +60,19 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         }
       }
 
-      // Check if password needs to be changed
-      if (!member.password_changed) {
-        navigate("/change-password");
-        return;
-      }
-
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
       
       setIsLoggedIn(true);
+
+      // Check if password needs to be changed
+      if (!member.password_changed) {
+        navigate("/change-password");
+        return;
+      }
+
       navigate("/admin/profile");
     } catch (error) {
       console.error("Member ID login error:", error);

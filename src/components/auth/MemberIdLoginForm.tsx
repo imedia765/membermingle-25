@@ -16,10 +16,7 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const cleanMemberId = memberId.toUpperCase().trim();
-    console.log("Login attempt with:", {
-      memberId: cleanMemberId,
-      passwordLength: password.length
-    });
+    console.log("Login attempt with member ID:", cleanMemberId);
     await onSubmit(cleanMemberId, password);
   };
 
@@ -51,7 +48,7 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
           id="memberPassword"
           name="memberPassword"
           type="password"
-          placeholder="Password (same as Member ID)"
+          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
