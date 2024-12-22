@@ -1,22 +1,22 @@
 import { Routes, Route } from "react-router-dom";
-import { Index } from "./pages/Index";
-import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
-import { TermsAndConditions } from "./pages/TermsAndConditions";
-import { CollectorResponsibilities } from "./pages/CollectorResponsibilities";
-import { MedicalExaminerProcess } from "./pages/MedicalExaminerProcess";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import CollectorResponsibilities from "./pages/CollectorResponsibilities";
+import MedicalExaminerProcess from "./pages/MedicalExaminerProcess";
 
 // Admin routes
 import { AdminLayout } from "./components/AdminLayout";
-import { Dashboard } from "./pages/admin/Dashboard";
-import { Members } from "./pages/admin/Members";
-import { Collectors } from "./pages/admin/Collectors";
-import { Finance } from "./pages/admin/Finance";
-import { Support } from "./pages/admin/Support";
-import { Profile } from "./pages/admin/Profile";
-import { Database } from "./pages/admin/Database";
-import { Registrations } from "./pages/admin/Registrations";
-import { CoveredMembers } from "./pages/admin/CoveredMembers";
+import Dashboard from "./pages/admin/Dashboard";
+import Members from "./pages/admin/Members";
+import Collectors from "./pages/admin/Collectors";
+import Finance from "./pages/admin/Finance";
+import Support from "./pages/admin/Support";
+import Profile from "./pages/admin/Profile";
+import Database from "./pages/admin/Database";
+import Registrations from "./pages/admin/Registrations";
+import CoveredMembers from "./pages/admin/CoveredMembers";
 
 export function AppRoutes() {
   return (
