@@ -32,8 +32,27 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       const tempEmail = `${memberId.toLowerCase()}@temp.pwaburton.org`;
       console.log("Attempting login with:", tempEmail);
 
-      // Try to sign in first
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      // Check if auth user exists
+      const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers();
+      const existingUser = users?.find(u => u.email === tempEmail);
+
+      let authUser;
+      if (!existingUser) {
+        console.log("Creating new auth user");
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: tempEmail,
+          password: password,
+        });
+
+        if (signUpError) {
+          console.error('Sign up error:', signUpError);
+          throw new Error("Failed to create account. Please try again.");
+        }
+        authUser = signUpData.user;
+      }
+
+      // Try to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
         password: password,
       });
@@ -43,7 +62,9 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         throw new Error("Invalid Member ID or password. Please try again.");
       }
 
-      if (!data.user) {
+      authUser = signInData.user;
+
+      if (!authUser) {
         throw new Error("Login failed. Please try again.");
       }
 
@@ -52,7 +73,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         const { error: updateError } = await supabase
           .from('members')
           .update({ 
-            auth_user_id: data.user.id,
+            auth_user_id: authUser.id,
             email_verified: true,
             profile_updated: true
           })
