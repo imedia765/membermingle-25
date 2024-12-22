@@ -29,19 +29,41 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       // Generate temp email for auth
       const tempEmail = `${memberId.toLowerCase()}@temp.pwaburton.org`;
       console.log("Attempting login with:", tempEmail);
-      
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+
+      // First try to sign in
+      let authResponse = await supabase.auth.signInWithPassword({
         email: tempEmail,
         password: password,
       });
 
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        throw new Error("Invalid Member ID or password. Please try again.");
+      // If sign in fails, try to sign up
+      if (authResponse.error && authResponse.error.message.includes('Invalid login credentials')) {
+        console.log("Sign in failed, attempting signup");
+        authResponse = await supabase.auth.signUp({
+          email: tempEmail,
+          password: password,
+          options: {
+            data: {
+              member_id: member.id,
+            },
+          },
+        });
+
+        if (authResponse.error) {
+          console.error('Sign up error:', authResponse.error);
+          throw new Error("Failed to create account. Please try again.");
+        }
+
+        // Try signing in again after signup
+        authResponse = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: password,
+        });
       }
 
-      if (!data.user) {
-        throw new Error("Login failed. Please try again.");
+      if (authResponse.error || !authResponse.data?.user) {
+        console.error('Final auth error:', authResponse.error);
+        throw new Error("Authentication failed. Please check your credentials and try again.");
       }
 
       // Update auth_user_id if not set
@@ -49,7 +71,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
         const { error: updateError } = await supabase
           .from('members')
           .update({ 
-            auth_user_id: data.user.id,
+            auth_user_id: authResponse.data.user.id,
             email_verified: true,
             profile_updated: true
           })
