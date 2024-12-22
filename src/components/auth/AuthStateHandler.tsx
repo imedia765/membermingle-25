@@ -17,7 +17,6 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
         
         if (error) {
           console.error("Session check error:", error);
-          // Clear any stale session data
           await supabase.auth.signOut();
           setIsLoggedIn(false);
           return;
@@ -27,7 +26,6 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
           console.log("Active session found");
           setIsLoggedIn(true);
           
-          // Check if user needs to complete profile
           const { data: member } = await supabase
             .from('members')
             .select('first_time_login, profile_completed')
@@ -47,52 +45,61 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
         }
       } catch (error) {
         console.error("Session check failed:", error);
-        // Clear any stale session data on error
         await supabase.auth.signOut();
         setIsLoggedIn(false);
       }
     };
 
-    // Initial session check
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", { event, session });
       
-      switch (event) {
-        case "SIGNED_IN":
-          if (session) {
-            console.log("Sign in event detected");
-            setIsLoggedIn(true);
-            toast({
-              title: "Signed in successfully",
-              description: "Welcome back!",
-            });
-            handleSuccessfulLogin(session, navigate);
-          }
-          break;
-          
-        case "SIGNED_OUT":
-          console.log("User signed out");
-          setIsLoggedIn(false);
-          navigate("/");
-          break;
-          
-        case "TOKEN_REFRESHED":
-          console.log("Token refreshed successfully");
-          if (session) {
-            setIsLoggedIn(true);
-          }
-          break;
-          
-        case "USER_UPDATED":
-          console.log("User data updated");
-          break;
+      if (event === "SIGNED_IN" && session) {
+        console.log("Sign in event detected");
+        setIsLoggedIn(true);
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back!",
+        });
+        
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user?.email) return;
 
-        case "INITIAL_SESSION":
-          console.log("Initial session:", session);
-          setIsLoggedIn(!!session);
-          break;
+          const { data: member, error } = await supabase
+            .from('members')
+            .select('first_time_login, profile_completed')
+            .eq('email', user.email)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Error checking member status:", error);
+            navigate("/admin/profile");
+            return;
+          }
+
+          if (member && (member.first_time_login || !member.profile_completed)) {
+            navigate("/admin/profile");
+          } else {
+            navigate("/admin/profile");
+          }
+        } catch (error) {
+          console.error("Error handling successful login:", error);
+          navigate("/admin/profile");
+        }
+      } else if (event === "SIGNED_OUT") {
+        console.log("User signed out");
+        setIsLoggedIn(false);
+        navigate("/");
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        console.log("Token refreshed successfully");
+        setIsLoggedIn(true);
+      } else if (event === "USER_UPDATED") {
+        console.log("User data updated");
+      } else if (event === "INITIAL_SESSION") {
+        console.log("Initial session:", session);
+        setIsLoggedIn(!!session);
       }
     });
 
@@ -101,35 +108,4 @@ export const useAuthStateHandler = (setIsLoggedIn: (value: boolean) => void) => 
       subscription.unsubscribe();
     };
   }, [navigate, setIsLoggedIn, toast]);
-};
-
-const handleSuccessfulLogin = async (session: any, navigate: (path: string) => void) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) return;
-
-    const { data: member, error } = await supabase
-      .from('members')
-      .select('first_time_login, profile_completed, email_verified')
-      .eq('email', user.email)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error checking member status:", error);
-      navigate("/admin/profile");
-      return;
-    }
-
-    // Check if profile needs to be completed
-    if (member && (member.first_time_login || !member.profile_completed)) {
-      navigate("/admin/profile");
-      return;
-    }
-
-    // If all checks pass, redirect to profile
-    navigate("/admin/profile");
-  } catch (error) {
-    console.error("Error in handleSuccessfulLogin:", error);
-    navigate("/admin/profile");
-  }
 };

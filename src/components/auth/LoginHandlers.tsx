@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User } from "@supabase/supabase-js";
 
 export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
   const { toast } = useToast();
@@ -37,72 +36,93 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       const minPasswordLength = 6;
       const actualPassword = password.length < minPasswordLength ? password.padEnd(minPasswordLength, password) : password;
 
-      // Try to sign in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: actualPassword,
-      });
-
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        
-        // If login fails, try to sign up
-        console.log("Attempting signup for new user");
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      try {
+        // Try to sign in
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: tempEmail,
           password: actualPassword,
         });
 
-        if (signUpError) {
-          console.error('Sign up error:', signUpError);
-          throw new Error("Failed to create account. Please try again.");
+        if (signInError) {
+          console.error('Sign in error:', signInError);
+          throw signInError;
         }
 
-        if (!signUpData.user) {
-          throw new Error("Failed to create account. Please try again.");
+        if (!signInData.user) {
+          throw new Error("Login failed. Please try again.");
+        }
+
+        // Update auth_user_id if not set
+        if (!member.auth_user_id) {
+          const { error: updateError } = await supabase
+            .from('members')
+            .update({ 
+              auth_user_id: signInData.user.id,
+              email_verified: true,
+              profile_updated: true
+            })
+            .eq('id', member.id);
+
+          if (updateError) {
+            console.error('Error updating auth_user_id:', updateError);
+          }
+        }
+
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        
+        setIsLoggedIn(true);
+
+        // Check if password needs to be changed
+        if (!member.password_changed) {
+          navigate("/change-password");
+          return;
+        }
+
+        navigate("/admin/profile");
+      } catch (authError: any) {
+        console.error("Authentication error:", authError);
+        
+        // If login fails and it's a new user, try to sign up
+        if (authError.message?.includes('Invalid login credentials')) {
+          console.log("Attempting signup for new user");
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: tempEmail,
+            password: actualPassword,
+          });
+
+          if (signUpError) {
+            console.error('Sign up error:', signUpError);
+            throw new Error("Failed to create account. Please try again.");
+          }
+
+          if (!signUpData.user) {
+            throw new Error("Failed to create account. Please try again.");
+          }
+
+          // Try signing in again after signup
+          const { data: finalSignInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
+            email: tempEmail,
+            password: actualPassword,
+          });
+
+          if (finalSignInError || !finalSignInData.user) {
+            throw new Error("Login failed after account creation. Please try again.");
+          }
+
+          toast({
+            title: "Account created and logged in",
+            description: "Welcome!",
+          });
+          
+          setIsLoggedIn(true);
+          navigate("/admin/profile");
+        } else {
+          throw new Error("Authentication failed. Please check your credentials and try again.");
         }
       }
-
-      // Try signing in again after potential signup
-      const { data: finalSignInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: actualPassword,
-      });
-
-      if (finalSignInError || !finalSignInData.user) {
-        throw new Error("Login failed. Please try again.");
-      }
-
-      // Update auth_user_id if not set
-      if (!member.auth_user_id) {
-        const { error: updateError } = await supabase
-          .from('members')
-          .update({ 
-            auth_user_id: finalSignInData.user.id,
-            email_verified: true,
-            profile_updated: true
-          })
-          .eq('id', member.id);
-
-        if (updateError) {
-          console.error('Error updating auth_user_id:', updateError);
-        }
-      }
-
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-      
-      setIsLoggedIn(true);
-
-      // Check if password needs to be changed
-      if (!member.password_changed) {
-        navigate("/change-password");
-        return;
-      }
-
-      navigate("/admin/profile");
     } catch (error) {
       console.error("Member ID login error:", error);
       toast({
