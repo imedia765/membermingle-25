@@ -24,7 +24,7 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       }
 
       if (!member) {
-        throw new Error("Invalid Member ID. Please check your credentials and try again.");
+        throw new Error("Invalid Member ID. Please check your credentials.");
       }
 
       console.log("Found member:", member);
@@ -34,13 +34,13 @@ export const useLoginHandlers = (setIsLoggedIn: (value: boolean) => void) => {
       console.log("Attempting login with:", tempEmail);
 
       // Check if auth user exists
-      const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers<User[]>();
+      const { data, error: getUserError } = await supabase.auth.admin.listUsers();
       if (getUserError) {
         console.error('Error fetching users:', getUserError);
         throw new Error("Error checking user status. Please try again later.");
       }
 
-      const existingUser = users?.find((u: User) => u.email === tempEmail);
+      const existingUser = data.users.find((u: User) => u.email === tempEmail);
 
       let authUser: User | null = null;
       if (!existingUser) {
