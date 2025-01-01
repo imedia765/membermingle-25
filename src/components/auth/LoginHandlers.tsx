@@ -26,7 +26,7 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
     console.log("Member authenticated:", member);
 
     // Generate email for auth
-    const email = member.email || `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`;
+    const email = `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`;
 
     // Attempt to sign in
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -37,6 +37,18 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
     if (signInError) {
       console.error('Sign in failed:', signInError);
       throw new Error("Invalid credentials");
+    }
+
+    // Update the member record with the auth_user_id if not already set
+    if (signInData.user && (!member.auth_user_id || member.auth_user_id !== signInData.user.id)) {
+      const { error: updateError } = await supabase
+        .from('members')
+        .update({ auth_user_id: signInData.user.id })
+        .eq('member_number', cleanMemberId);
+
+      if (updateError) {
+        console.error('Failed to update member auth_user_id:', updateError);
+      }
     }
 
     console.log("Login successful, redirecting to admin");
