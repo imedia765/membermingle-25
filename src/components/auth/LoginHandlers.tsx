@@ -43,7 +43,10 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
     if (signInData.user && (!member.auth_user_id || member.auth_user_id !== signInData.user.id)) {
       const { error: updateError } = await supabase
         .from('members')
-        .update({ auth_user_id: signInData.user.id })
+        .update({ 
+          auth_user_id: signInData.user.id,
+          updated_at: new Date().toISOString()
+        })
         .eq('member_number', cleanMemberId);
 
       if (updateError) {

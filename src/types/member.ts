@@ -43,3 +43,9 @@ export interface Member {
   admin_note?: string;
   created_by?: string;
 }
+
+export interface CollectorMember extends Member {
+  prefix?: string;
+  number?: string;
+  active?: boolean;
+}

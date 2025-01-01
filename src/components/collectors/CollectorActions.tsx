@@ -6,17 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PrintCollectorDetails } from "./PrintCollectorDetails";
 import { MoveCollectorMembersDialog } from "./MoveCollectorMembersDialog";
+import type { CollectorMember } from "@/types/member";
 
 interface CollectorActionsProps {
-  collector: {
-    id: string;
-    name: string;
-    active?: boolean | null;
-    members?: any[];
-    prefix?: string;
-    number?: string;
-  };
-  collectors: Array<{ id: string; name: string }>;
+  collector: CollectorMember;
+  collectors: CollectorMember[];
   onEdit: (collector: { id: string; name: string }) => void;
   onUpdate: () => void;
 }
@@ -43,12 +37,28 @@ export function CollectorActions({ collector, collectors, onEdit, onUpdate }: Co
 
     setIsLoading(true);
     try {
-      // Call the delete_collector function using a direct RPC call
-      const { error } = await supabase.functions.invoke('delete-collector', {
-        body: { collector_id: collector.id }
-      });
+      // Update all members to remove collector association
+      const { error: updateError } = await supabase
+        .from('members')
+        .update({ 
+          collector_id: null,
+          collector: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('collector_id', collector.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Update the collector's role back to member
+      const { error: roleError } = await supabase
+        .from('members')
+        .update({ 
+          role: 'member',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', collector.id);
+
+      if (roleError) throw roleError;
 
       toast({
         title: "Collector deleted",
@@ -71,7 +81,7 @@ export function CollectorActions({ collector, collectors, onEdit, onUpdate }: Co
     setIsLoading(true);
     try {
       const { error } = await supabase
-        .from('collectors')
+        .from('members')
         .update({ 
           active: true,
           updated_at: new Date().toISOString()
@@ -101,7 +111,7 @@ export function CollectorActions({ collector, collectors, onEdit, onUpdate }: Co
     setIsLoading(true);
     try {
       const { error } = await supabase
-        .from('collectors')
+        .from('members')
         .update({ 
           active: false,
           updated_at: new Date().toISOString()
