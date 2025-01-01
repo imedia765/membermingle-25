@@ -33,16 +33,20 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
 
     // If member already has an auth account, try to sign in
     if (member.auth_user_id) {
+      console.log("Attempting login with existing account");
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: member.email || `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`,
         password: cleanMemberId
       });
 
-      if (!signInError) {
+      if (!signInError && signInData) {
         console.log("Login successful with existing account");
         navigate("/admin");
         return;
       }
+      
+      // If sign in failed, we'll try to create a new account
+      console.log("Login failed, will try to create new account:", signInError);
     }
 
     // Generate a valid email for auth
@@ -50,7 +54,7 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
 
     console.log("Creating new auth account for member");
 
-    // Create new auth account
+    // Create new auth account with metadata
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: cleanMemberId,
@@ -64,6 +68,11 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
 
     if (signUpError) {
       console.error('Sign up failed:', signUpError);
+      throw new Error("Account creation failed");
+    }
+
+    if (!signUpData.user) {
+      console.error('Sign up succeeded but no user returned');
       throw new Error("Account creation failed");
     }
 
