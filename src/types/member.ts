@@ -27,4 +27,19 @@ export interface Member {
   registration_completed?: boolean;
   auth_user_id?: string;
   role: 'member' | 'collector' | 'admin';
+  payment_amount?: number;
+  payment_type?: string;
+  payment_date?: string;
+  payment_notes?: string;
+  family_member_name?: string;
+  family_member_relationship?: string;
+  family_member_dob?: string;
+  family_member_gender?: string;
+  registration_status?: string;
+  ticket_subject?: string;
+  ticket_description?: string;
+  ticket_status?: string;
+  ticket_priority?: string;
+  admin_note?: string;
+  created_by?: string;
 }
