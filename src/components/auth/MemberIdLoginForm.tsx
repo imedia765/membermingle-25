@@ -9,7 +9,6 @@ interface MemberIdLoginFormProps {
 
 export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProps) => {
   const [memberId, setMemberId] = useState("");
-  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -18,7 +17,7 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
     const cleanMemberId = memberId.toUpperCase().trim();
     const formData = new FormData(e.currentTarget);
     formData.set('memberId', cleanMemberId);
-    formData.set('password', password);
+    formData.set('password', cleanMemberId); // Use same value for password
     
     await onSubmit(e);
   };
@@ -38,23 +37,11 @@ export const MemberIdLoginForm = ({ onSubmit, isLoading }: MemberIdLoginFormProp
           className="uppercase"
         />
       </div>
-      <div className="space-y-2">
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="Password (same as Member ID)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={isLoading}
-        />
-      </div>
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Logging in..." : "Login"}
       </Button>
       <p className="text-sm text-muted-foreground text-center">
-        Use your Member ID as both username and password
+        Use your Member ID to login
       </p>
     </form>
   );

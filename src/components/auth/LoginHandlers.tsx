@@ -25,17 +25,14 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
     const member = authData[0];
     console.log("Member authenticated:", member);
 
-    // Verify the password matches the member number
-    if (password !== cleanMemberId) {
-      console.error("Password verification failed");
-      throw new Error("Invalid credentials");
-    }
+    // Generate a valid email for auth
+    const email = member.email || `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`;
 
     // If member already has an auth account, try to sign in
     if (member.auth_user_id) {
       console.log("Attempting login with existing account");
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: member.email || `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`,
+        email: email,
         password: cleanMemberId
       });
 
@@ -45,16 +42,12 @@ export async function handleMemberIdLogin(memberId: string, password: string, na
         return;
       }
       
-      // If sign in failed, we'll try to create a new account
       console.log("Login failed, will try to create new account:", signInError);
     }
 
-    // Generate a valid email for auth
-    const email = member.email || `${cleanMemberId.toLowerCase()}@temp.pwaburton.org`;
-
     console.log("Creating new auth account for member");
 
-    // Create new auth account with metadata
+    // Create new auth account
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: cleanMemberId,
