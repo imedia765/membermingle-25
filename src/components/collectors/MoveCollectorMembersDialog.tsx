@@ -139,7 +139,8 @@ export function MoveCollectorMembersDialog({
         <div className="space-y-4">
           <CollectorSelect
             collectors={collectors}
-            selectedCollector={selectedCollectorId}
+            currentCollectorId={collector.id}
+            selectedCollectorId={selectedCollectorId}
             onCollectorChange={setSelectedCollectorId}
           />
 

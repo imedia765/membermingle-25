@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Upload } from "lucide-react";
 import { useRef } from "react";
-import { exportDatabase, restoreDatabase } from "@/utils/databaseBackup";
+import { exportDatabase, exportDatabaseAsCSV, restoreDatabase } from "@/utils/databaseBackup";
 import { useToast } from "@/hooks/use-toast";
 
 interface BackupSectionProps {
@@ -14,13 +14,21 @@ export function BackupSection({ onBackupComplete, onRestoreComplete }: BackupSec
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleBackup = async () => {
+  const handleBackup = async (format: 'json' | 'csv') => {
     try {
-      await exportDatabase();
-      toast({
-        title: "Backup successful",
-        description: "Database backup has been downloaded",
-      });
+      if (format === 'csv') {
+        await exportDatabaseAsCSV();
+        toast({
+          title: "CSV export successful",
+          description: "Database has been exported as CSV",
+        });
+      } else {
+        await exportDatabase();
+        toast({
+          title: "Backup successful",
+          description: "Database backup has been downloaded",
+        });
+      }
       onBackupComplete?.();
     } catch (error) {
       toast({
@@ -64,13 +72,23 @@ export function BackupSection({ onBackupComplete, onRestoreComplete }: BackupSec
         <p className="text-sm text-muted-foreground">
           Create a backup of the entire database. This includes all member records, payments, and system settings.
         </p>
-        <Button 
-          className="w-full flex items-center gap-2"
-          onClick={handleBackup}
-        >
-          <Download className="h-4 w-4" />
-          Download Backup
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button 
+            className="w-full flex items-center gap-2"
+            onClick={() => handleBackup('json')}
+          >
+            <Download className="h-4 w-4" />
+            Download JSON Backup
+          </Button>
+          <Button 
+            className="w-full flex items-center gap-2"
+            variant="secondary"
+            onClick={() => handleBackup('csv')}
+          >
+            <Download className="h-4 w-4" />
+            Download CSV Export
+          </Button>
+        </div>
         <input
           type="file"
           accept=".json"

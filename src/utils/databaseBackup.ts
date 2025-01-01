@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { saveAs } from 'file-saver';
+import Papa from 'papaparse';
+import JSZip from 'jszip';
 
 const TABLES = [
   'ticket_responses',
@@ -9,8 +11,7 @@ const TABLES = [
   'family_members',
   'admin_notes',
   'members',
-  'collectors',
-  'profiles'
+  'collectors'
 ] as const;
 
 type TableName = typeof TABLES[number];
@@ -235,6 +236,48 @@ export async function getDatabaseStatus() {
     };
   } catch (error) {
     console.error('Error getting database status:', error);
+    throw error;
+  }
+}
+
+export async function exportDatabaseAsCSV() {
+  try {
+    // Fetch all data from relevant tables
+    const [
+      membersResult,
+      collectorsResult,
+      paymentsResult,
+      familyMembersResult
+    ] = await Promise.all([
+      supabase.from('members').select('*'),
+      supabase.from('collectors').select('*'),
+      supabase.from('payments').select('*'),
+      supabase.from('family_members').select('*')
+    ]);
+
+    // Prepare CSV data for each table
+    const csvData = {
+      members: Papa.unparse(membersResult.data || []),
+      collectors: Papa.unparse(collectorsResult.data || []),
+      payments: Papa.unparse(paymentsResult.data || []),
+      familyMembers: Papa.unparse(familyMembersResult.data || [])
+    };
+
+    // Create a zip of CSV files
+    const zip = new JSZip();
+    Object.entries(csvData).forEach(([tableName, csv]) => {
+      zip.file(`${tableName}.csv`, csv);
+    });
+
+    // Generate and download the zip file
+    const content = await zip.generateAsync({ type: "blob" });
+    const fileName = `database_export_${new Date().toISOString()}.zip`;
+    saveAs(content, fileName);
+
+    await logDatabaseAction('csv-export', `CSV export created: ${fileName}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating CSV export:', error);
     throw error;
   }
 }

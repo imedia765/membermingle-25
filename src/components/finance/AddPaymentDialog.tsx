@@ -27,44 +27,65 @@ export function AddPaymentDialog({ isOpen, onClose, onPaymentAdded }: AddPayment
     },
   });
 
-  // Query for searching members with proper collector relationship
-  const { data: members } = useQuery({
-    queryKey: ['members', searchTerm],
+  // Get current user's session and member data
+  const { data: currentMember } = useQuery({
+    queryKey: ['currentMember'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: member, error } = await supabase
         .from('members')
-        .select(`
-          id, 
-          full_name, 
-          member_number, 
-          email,
-          collector_id
-        `)
-        .or(`full_name.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
+        .select('id, email, role, collector_id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
 
-      // Remove duplicates based on full_name and collector_id
-      const uniqueMembers = data?.reduce((acc: MemberSearchResult[], current) => {
-        const exists = acc.find(
-          item => 
-            item.full_name.toLowerCase() === current.full_name.toLowerCase() && 
-            item.collector_id === current.collector_id
-        );
-        if (!exists) {
-          acc.push(current);
-        }
-        return acc;
-      }, []);
-
-      return uniqueMembers as MemberSearchResult[];
+      if (error) {
+        console.error('Error fetching member:', error);
+        throw error;
+      }
+      return member;
     },
-    enabled: searchTerm.length > 0,
   });
 
-  // Form submission and other handlers
+  // Get collector ID if user is a collector
+  const { data: collectorData } = useQuery({
+    queryKey: ['collectorId', currentMember?.email],
+    queryFn: async () => {
+      if (!currentMember?.email || currentMember.role !== 'collector') return null;
+
+      if (!currentMember.collector_id) {
+        console.log('No collector_id found for member');
+        return null;
+      }
+
+      return { collector_id: currentMember.collector_id };
+    },
+    enabled: !!currentMember?.email && currentMember.role === 'collector',
+  });
+
+  // Query to search for members
+  const { data: searchResults } = useQuery({
+    queryKey: ['memberSearch', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || !currentMember?.collector_id) return [];
+
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('*')
+        .or(`full_name.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%`)
+        .eq('collector_id', currentMember.collector_id)
+        .limit(10);
+
+      if (error) {
+        console.error('Error searching members:', error);
+        throw error;
+      }
+      return members || [];
+    },
+    enabled: searchTerm.length > 0 && !!currentMember?.collector_id,
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -80,11 +101,12 @@ export function AddPaymentDialog({ isOpen, onClose, onPaymentAdded }: AddPayment
                 setSearchTerm={setSearchTerm}
               />
               <MemberSearchResults
-                members={members || []}
+                members={searchResults || []}
                 onSelect={(member) => {
                   setSelectedMember(member);
                   setSearchTerm("");
                 }}
+                collectorId={collectorData?.collector_id}
               />
             </>
           ) : (
@@ -97,7 +119,7 @@ export function AddPaymentDialog({ isOpen, onClose, onPaymentAdded }: AddPayment
                     .from('payments')
                     .insert({
                       member_id: selectedMember.id,
-                      collector_id: selectedMember.collector_id,
+                      collector_id: collectorData?.collector_id || selectedMember.collector_id,
                       amount: parseFloat(data.amount),
                       payment_type: data.paymentType,
                       notes: data.notes,

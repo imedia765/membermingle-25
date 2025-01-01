@@ -1,24 +1,8 @@
-export type Profile = {
-  Row: {
-    created_at: string
-    email: string | null
-    id: string
-    updated_at: string
-    user_id: string | null
-  }
-  Insert: {
-    created_at?: string
-    email?: string | null
-    id?: string
-    updated_at?: string
-    user_id?: string | null
-  }
-  Update: {
-    created_at?: string
-    email?: string | null
-    id?: string
-    updated_at?: string
-    user_id?: string | null
-  }
-  Relationships: []
+export interface Profile {
+  id: string;
+  auth_user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
 }

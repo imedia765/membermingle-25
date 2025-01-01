@@ -1,36 +1,11 @@
-export type Collector = {
-  Row: {
-    active: boolean | null
-    created_at: string
-    email: string | null
-    id: string
-    name: string
-    number: string
-    phone: string | null
-    prefix: string
-    updated_at: string
-  }
-  Insert: {
-    active?: boolean | null
-    created_at?: string
-    email?: string | null
-    id?: string
-    name: string
-    number: string
-    phone?: string | null
-    prefix: string
-    updated_at?: string
-  }
-  Update: {
-    active?: boolean | null
-    created_at?: string
-    email?: string | null
-    id?: string
-    name?: string
-    number?: string
-    phone?: string | null
-    prefix?: string
-    updated_at?: string
-  }
-  Relationships: []
+export interface Collector {
+  id: string;
+  name: string;
+  prefix: string;
+  number: string;
+  email: string | null;
+  phone: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 }

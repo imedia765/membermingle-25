@@ -1,97 +1,144 @@
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
+import { ThemeToggle } from "./ThemeToggle";
+import { Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { useState } from "react";
 import { supabase } from "../integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
-import { ThemeToggle } from "./ThemeToggle";
-import { NavLogo } from "./navigation/NavLogo";
-import { NavLinks } from "./navigation/NavLinks";
-import { AuthButtons } from "./navigation/AuthButtons";
-import { MobileNav } from "./navigation/MobileNav";
+import { useAuthStateHandler } from "./auth/AuthStateHandler";
 
 export function NavigationMenu() {
+  const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Session check error:", error);
-        setIsLoggedIn(false);
-      } else {
-        setIsLoggedIn(!!session);
-      }
-      setLoading(false);
-    };
+  // Use the consolidated auth state handler
+  useAuthStateHandler(setIsLoggedIn);
 
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, !!session);
-      setIsLoggedIn(!!session);
-      
-      if (event === "SIGNED_IN") {
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome back!",
-          duration: 3000,
-        });
-      } else if (event === "SIGNED_OUT") {
-        toast({
-          title: "Logged out successfully",
-          description: "Come back soon!",
-          duration: 3000,
-        });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [toast]);
+  const handleNavigation = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      
+      setIsLoggedIn(false);
+      toast({
+        title: "Logged out successfully",
+        description: "Come back soon!",
+      });
+      navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
+      setIsLoggedIn(false);
+      navigate("/login");
       toast({
-        title: "Logout failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-        duration: 3000,
+        title: "Session ended",
+        description: "You have been logged out.",
       });
     }
   };
 
-  if (loading) {
-    return (
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container flex h-14 items-center justify-between">
-          <NavLogo />
-          <ThemeToggle />
-        </div>
-      </nav>
-    );
-  }
-
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-14 items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <NavLogo />
-          <NavLinks />
-        </div>
+        <Link to="/" className="flex items-center space-x-2">
+          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            PWA Burton
+          </span>
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
-          <AuthButtons isLoggedIn={isLoggedIn} handleLogout={handleLogout} />
+          {isLoggedIn ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+              <Link to="/admin">
+                <Button variant="outline" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="outline" size="sm">
+                  Login
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="default" size="sm">
+                  Register
+                </Button>
+              </Link>
+            </>
+          )}
           <ThemeToggle />
         </div>
 
         {/* Mobile Navigation */}
-        <div className="flex md:hidden items-center space-x-2">
+        <div className="flex items-center space-x-2 md:hidden">
           <ThemeToggle />
-          <MobileNav isLoggedIn={isLoggedIn} handleLogout={handleLogout} />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[80%] sm:w-[385px] p-0">
+              <div className="flex flex-col gap-4 p-6">
+                <div className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-4">
+                  Menu
+                </div>
+                {isLoggedIn ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="justify-start bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                      onClick={() => handleNavigation("/admin")}
+                    >
+                      Dashboard
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="justify-start bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                      onClick={() => handleNavigation("/login")}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                      onClick={() => handleNavigation("/register")}
+                    >
+                      Register
+                    </Button>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>
