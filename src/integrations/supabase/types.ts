@@ -12,15 +12,21 @@ export type Database = {
       members: {
         Row: {
           address: string | null
+          admin_note: string | null
           auth_user_id: string | null
           collector: string | null
           collector_id: string | null
           cors_enabled: boolean | null
           created_at: string
+          created_by: string | null
           date_of_birth: string | null
           default_password_hash: string | null
           email: string | null
           email_verified: boolean | null
+          family_member_dob: string | null
+          family_member_gender: string | null
+          family_member_name: string | null
+          family_member_relationship: string | null
           first_time_login: boolean | null
           full_name: string
           gender: string | null
@@ -29,28 +35,43 @@ export type Database = {
           member_number: string
           membership_type: string | null
           password_changed: boolean | null
+          payment_amount: number | null
+          payment_date: string | null
+          payment_notes: string | null
+          payment_type: string | null
           phone: string | null
           postcode: string | null
           profile_completed: boolean | null
           profile_updated: boolean | null
           registration_completed: boolean | null
+          registration_status: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: string | null
+          ticket_description: string | null
+          ticket_priority: string | null
+          ticket_status: string | null
+          ticket_subject: string | null
           town: string | null
           updated_at: string
           verified: boolean | null
         }
         Insert: {
           address?: string | null
+          admin_note?: string | null
           auth_user_id?: string | null
           collector?: string | null
           collector_id?: string | null
           cors_enabled?: boolean | null
           created_at?: string
+          created_by?: string | null
           date_of_birth?: string | null
           default_password_hash?: string | null
           email?: string | null
           email_verified?: boolean | null
+          family_member_dob?: string | null
+          family_member_gender?: string | null
+          family_member_name?: string | null
+          family_member_relationship?: string | null
           first_time_login?: boolean | null
           full_name: string
           gender?: string | null
@@ -59,28 +80,43 @@ export type Database = {
           member_number: string
           membership_type?: string | null
           password_changed?: boolean | null
+          payment_amount?: number | null
+          payment_date?: string | null
+          payment_notes?: string | null
+          payment_type?: string | null
           phone?: string | null
           postcode?: string | null
           profile_completed?: boolean | null
           profile_updated?: boolean | null
           registration_completed?: boolean | null
+          registration_status?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: string | null
+          ticket_description?: string | null
+          ticket_priority?: string | null
+          ticket_status?: string | null
+          ticket_subject?: string | null
           town?: string | null
           updated_at?: string
           verified?: boolean | null
         }
         Update: {
           address?: string | null
+          admin_note?: string | null
           auth_user_id?: string | null
           collector?: string | null
           collector_id?: string | null
           cors_enabled?: boolean | null
           created_at?: string
+          created_by?: string | null
           date_of_birth?: string | null
           default_password_hash?: string | null
           email?: string | null
           email_verified?: boolean | null
+          family_member_dob?: string | null
+          family_member_gender?: string | null
+          family_member_name?: string | null
+          family_member_relationship?: string | null
           first_time_login?: boolean | null
           full_name?: string
           gender?: string | null
@@ -89,13 +125,22 @@ export type Database = {
           member_number?: string
           membership_type?: string | null
           password_changed?: boolean | null
+          payment_amount?: number | null
+          payment_date?: string | null
+          payment_notes?: string | null
+          payment_type?: string | null
           phone?: string | null
           postcode?: string | null
           profile_completed?: boolean | null
           profile_updated?: boolean | null
           registration_completed?: boolean | null
+          registration_status?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: string | null
+          ticket_description?: string | null
+          ticket_priority?: string | null
+          ticket_status?: string | null
+          ticket_subject?: string | null
           town?: string | null
           updated_at?: string
           verified?: boolean | null
@@ -117,6 +162,7 @@ export type Database = {
           auth_user_id: string
           full_name: string
           email: string
+          role: string
         }[]
       }
     }
