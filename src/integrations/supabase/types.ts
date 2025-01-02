@@ -152,19 +152,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      authenticate_member: {
-        Args: {
-          p_member_number: string
-        }
-        Returns: {
-          id: string
-          member_number: string
-          auth_user_id: string
-          full_name: string
-          email: string
-          role: string
-        }[]
-      }
+      authenticate_member:
+        | {
+            Args: {
+              p_member_number: string
+            }
+            Returns: {
+              id: string
+              member_number: string
+              auth_user_id: string
+              full_name: string
+              email: string
+              role: string
+            }[]
+          }
+        | {
+            Args: {
+              p_member_number: string
+              p_password: string
+            }
+            Returns: {
+              id: string
+              member_number: string
+              full_name: string
+              email: string
+              role: Database["public"]["Enums"]["user_role"]
+            }[]
+          }
     }
     Enums: {
       user_role: "member" | "collector" | "admin"
