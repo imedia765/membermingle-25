@@ -27,9 +27,13 @@ type Member = {
   status: string | null;
 }
 
+type CollectorWithMembers = Member & {
+  assigned_members: Member[] | null;
+}
+
 const Collectors = () => {
   // Query to fetch collectors and their assigned members
-  const { data: collectors, isLoading: isLoadingCollectors } = useQuery({
+  const { data: collectors, isLoading: isLoadingCollectors } = useQuery<CollectorWithMembers[]>({
     queryKey: ["collectors"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,7 +45,7 @@ const Collectors = () => {
           email,
           phone,
           status,
-          assigned_members:members(
+          assigned_members:members!collector_id(
             id,
             full_name,
             member_number,
@@ -111,14 +115,14 @@ const Collectors = () => {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {collector.assigned_members?.length === 0 ? (
+                                  {!collector.assigned_members || collector.assigned_members.length === 0 ? (
                                     <TableRow>
                                       <TableCell colSpan={4} className="text-center">
                                         No members assigned
                                       </TableCell>
                                     </TableRow>
                                   ) : (
-                                    collector.assigned_members?.map((member: Member) => (
+                                    collector.assigned_members.map((member: Member) => (
                                       <TableRow key={member.id}>
                                         <TableCell>{member.full_name}</TableCell>
                                         <TableCell>{member.member_number}</TableCell>
