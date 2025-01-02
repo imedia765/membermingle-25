@@ -17,9 +17,10 @@ const Collectors = () => {
     queryKey: ["collectors"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("collectors")
+        .from("members")
         .select("*")
-        .order("name");
+        .eq("role", "collector")
+        .order("full_name");
 
       if (error) throw error;
       return data;
@@ -41,7 +42,7 @@ const Collectors = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Collector Number</TableHead>
+                <TableHead>Member Number</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
@@ -63,15 +64,13 @@ const Collectors = () => {
               ) : (
                 collectors?.map((collector) => (
                   <TableRow key={collector.id}>
-                    <TableCell>{collector.name}</TableCell>
-                    <TableCell>
-                      {collector.prefix}-{collector.number}
-                    </TableCell>
+                    <TableCell>{collector.full_name}</TableCell>
+                    <TableCell>{collector.member_number}</TableCell>
                     <TableCell>{collector.email || "—"}</TableCell>
                     <TableCell>{collector.phone || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={collector.active ? "success" : "secondary"}>
-                        {collector.active ? "Active" : "Inactive"}
+                      <Badge variant={collector.status === 'active' ? "success" : "secondary"}>
+                        {collector.status === 'active' ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                   </TableRow>
