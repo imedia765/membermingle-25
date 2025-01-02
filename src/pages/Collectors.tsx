@@ -18,8 +18,17 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+type Member = {
+  id: string;
+  full_name: string;
+  member_number: string;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+}
+
 const Collectors = () => {
-  // Query to fetch collectors
+  // Query to fetch collectors and their assigned members
   const { data: collectors, isLoading: isLoadingCollectors } = useQuery({
     queryKey: ["collectors"],
     queryFn: async () => {
@@ -32,15 +41,13 @@ const Collectors = () => {
           email,
           phone,
           status,
-          (
-            assigned_members:members(
-              id,
-              full_name,
-              member_number,
-              email,
-              phone,
-              status
-            )
+          assigned_members:members(
+            id,
+            full_name,
+            member_number,
+            email,
+            phone,
+            status
           )
         `)
         .eq("role", "collector")
@@ -111,7 +118,7 @@ const Collectors = () => {
                                       </TableCell>
                                     </TableRow>
                                   ) : (
-                                    collector.assigned_members?.map((member) => (
+                                    collector.assigned_members?.map((member: Member) => (
                                       <TableRow key={member.id}>
                                         <TableCell>{member.full_name}</TableCell>
                                         <TableCell>{member.member_number}</TableCell>
