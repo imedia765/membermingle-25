@@ -36,29 +36,40 @@ const Collectors = () => {
   const { data: collectors, isLoading: isLoadingCollectors } = useQuery<CollectorWithMembers[]>({
     queryKey: ["collectors"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch all collectors
+      const { data: collectorsData, error: collectorsError } = await supabase
         .from("members")
-        .select(`
-          id,
-          full_name,
-          member_number,
-          email,
-          phone,
-          status,
-          assigned_members:members!collector_id(
-            id,
-            full_name,
-            member_number,
-            email,
-            phone,
-            status
-          )
-        `)
+        .select("id, full_name, member_number, email, phone, status")
         .eq("role", "collector")
         .order("full_name");
 
-      if (error) throw error;
-      return data;
+      if (collectorsError) throw collectorsError;
+      if (!collectorsData) return [];
+
+      // Then, for each collector, fetch their assigned members
+      const collectorsWithMembers = await Promise.all(
+        collectorsData.map(async (collector) => {
+          const { data: membersData, error: membersError } = await supabase
+            .from("members")
+            .select("id, full_name, member_number, email, phone, status")
+            .eq("collector_id", collector.id);
+
+          if (membersError) {
+            console.error("Error fetching members for collector:", membersError);
+            return {
+              ...collector,
+              assigned_members: null,
+            };
+          }
+
+          return {
+            ...collector,
+            assigned_members: membersData || null,
+          };
+        })
+      );
+
+      return collectorsWithMembers;
     },
   });
 
@@ -122,7 +133,7 @@ const Collectors = () => {
                                       </TableCell>
                                     </TableRow>
                                   ) : (
-                                    collector.assigned_members.map((member: Member) => (
+                                    collector.assigned_members.map((member) => (
                                       <TableRow key={member.id}>
                                         <TableCell>{member.full_name}</TableCell>
                                         <TableCell>{member.member_number}</TableCell>
