@@ -45,84 +45,94 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
   const { data: debugInfo } = useQuery({
     queryKey: ['auth-debug', user.id],
     queryFn: async (): Promise<AuthDebugInfo> => {
-      // Fetch audit logs
-      const { data: auditLogs } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('table_name', 'auth')
-        .order('timestamp', { ascending: false })
-        .limit(5);
+      try {
+        // Fetch audit logs
+        const { data: auditLogs } = await supabase
+          .from('audit_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('table_name', 'auth')
+          .order('timestamp', { ascending: false })
+          .limit(5);
 
-      // Check session status
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Get role-related issues
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.auth_user_id);
+        // Check session status
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Get role-related issues
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', user.auth_user_id);
 
-      const roleIssues = [];
-      const permissionIssues = [];
+        const roleIssues: { type: string; description: string; }[] = [];
+        const permissionIssues: { type: string; description: string; }[] = [];
 
-      // Check for role mismatches
-      if (roleData) {
-        const assignedRoles = roleData.map(r => r.role);
-        if (assignedRoles.length === 0) {
-          roleIssues.push({
-            type: 'No Role',
-            description: 'User has no assigned roles'
+        // Check for role mismatches
+        if (roleData) {
+          const assignedRoles = roleData.map(r => r.role);
+          if (assignedRoles.length === 0) {
+            roleIssues.push({
+              type: 'No Role',
+              description: 'User has no assigned roles'
+            });
+          }
+          if (assignedRoles.length > 1) {
+            roleIssues.push({
+              type: 'Multiple Roles',
+              description: `User has multiple roles: ${assignedRoles.join(', ')}`
+            });
+          }
+          if (user.role && !assignedRoles.includes(user.role)) {
+            roleIssues.push({
+              type: 'Role Mismatch',
+              description: `Display role (${user.role}) doesn't match assigned roles`
+            });
+          }
+        }
+
+        // Check for permission issues
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('*')
+          .eq('auth_user_id', user.auth_user_id)
+          .single();
+
+        if (!memberData) {
+          permissionIssues.push({
+            type: 'No Member Profile',
+            description: 'User has no associated member profile'
           });
         }
-        if (assignedRoles.length > 1) {
-          roleIssues.push({
-            type: 'Multiple Roles',
-            description: `User has multiple roles: ${assignedRoles.join(', ')}`
-          });
-        }
-        if (user.role && !assignedRoles.includes(user.role)) {
-          roleIssues.push({
-            type: 'Role Mismatch',
-            description: `Display role (${user.role}) doesn't match assigned roles`
-          });
-        }
+
+        const authErrors = (auditLogs || [])
+          .filter(log => log.severity === 'error')
+          .map(log => (typeof log.new_values === 'string' ? log.new_values : 'Unknown error'));
+
+        const lastSignIn = auditLogs?.find(log => 
+          log.operation === 'create' && !log.severity
+        )?.timestamp;
+
+        const lastFailedAttempt = auditLogs?.find(log => 
+          log.severity === 'error'
+        )?.timestamp;
+
+        return {
+          lastSignIn: lastSignIn ? new Date(lastSignIn).toLocaleString() : undefined,
+          lastFailedAttempt: lastFailedAttempt ? new Date(lastFailedAttempt).toLocaleString() : undefined,
+          sessionStatus: session ? 'active' : 'none',
+          authErrors,
+          roleIssues,
+          permissionIssues
+        };
+      } catch (error) {
+        console.error('Error in debug info fetch:', error);
+        return {
+          sessionStatus: 'none',
+          authErrors: ['Error fetching debug information'],
+          roleIssues: [],
+          permissionIssues: []
+        };
       }
-
-      // Check for permission issues
-      const { data: memberData } = await supabase
-        .from('members')
-        .select('*')
-        .eq('auth_user_id', user.auth_user_id)
-        .single();
-
-      if (!memberData) {
-        permissionIssues.push({
-          type: 'No Member Profile',
-          description: 'User has no associated member profile'
-        });
-      }
-
-      const authErrors = auditLogs
-        ?.filter(log => log.severity === 'error')
-        .map(log => log.new_values as string || 'Unknown error') || [];
-
-      const lastSignIn = auditLogs
-        ?.find(log => log.operation === 'create' && !log.severity)
-        ?.timestamp;
-
-      const lastFailedAttempt = auditLogs
-        ?.find(log => log.severity === 'error')
-        ?.timestamp;
-
-      return {
-        lastSignIn: lastSignIn ? new Date(lastSignIn).toLocaleString() : undefined,
-        lastFailedAttempt: lastFailedAttempt ? new Date(lastFailedAttempt).toLocaleString() : undefined,
-        sessionStatus: session ? 'active' : 'none',
-        authErrors,
-        roleIssues,
-        permissionIssues
-      };
     }
   });
 
@@ -192,7 +202,7 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
           </Table>
 
           {/* Role Issues Section */}
-          {debugInfo.roleIssues.length > 0 && (
+          {debugInfo.roleIssues && debugInfo.roleIssues.length > 0 && (
             <div className="mt-4">
               <Alert variant="destructive" className="bg-yellow-500/10 border-yellow-500/20">
                 <Shield className="h-4 w-4 text-yellow-500" />
@@ -212,7 +222,7 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
           )}
 
           {/* Permission Issues Section */}
-          {debugInfo.permissionIssues.length > 0 && (
+          {debugInfo.permissionIssues && debugInfo.permissionIssues.length > 0 && (
             <div className="mt-4">
               <Alert variant="destructive" className="bg-red-500/10 border-red-500/20">
                 <AlertTriangle className="h-4 w-4 text-red-500" />
@@ -232,7 +242,7 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
           )}
 
           {/* Auth Errors Section */}
-          {debugInfo.authErrors.length > 0 && (
+          {debugInfo.authErrors && debugInfo.authErrors.length > 0 && (
             <div className="mt-4">
               <Alert variant="destructive" className="bg-red-500/10 border-red-500/20">
                 <AlertCircle className="h-4 w-4" />
