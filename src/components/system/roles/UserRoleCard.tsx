@@ -1,16 +1,25 @@
 import { useState } from 'react';
-import { User } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import RoleSelect from './RoleSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['app_role'];
 
 interface UserRoleCardProps {
-  user: User;
-  currentRole: string;
-  onRoleChange: (role: string) => void;
+  user: {
+    id: string;
+    user_id: string;
+    full_name: string;
+    member_number: string;
+    role: UserRole;
+    auth_user_id: string;
+    user_roles: { role: UserRole }[];
+  };
+  onRoleChange: (userId: string, newRole: UserRole) => void;
 }
 
 interface AuthDebugInfo {
@@ -20,7 +29,7 @@ interface AuthDebugInfo {
   authErrors: string[];
 }
 
-const UserRoleCard = ({ user, currentRole, onRoleChange }: UserRoleCardProps) => {
+const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
   const [showDebug, setShowDebug] = useState(false);
 
   // Fetch auth debug information
@@ -39,7 +48,7 @@ const UserRoleCard = ({ user, currentRole, onRoleChange }: UserRoleCardProps) =>
       
       const authErrors = auditLogs
         ?.filter(log => log.severity === 'error')
-        .map(log => log.details as string) || [];
+        .map(log => log.new_values as string || 'Unknown error') || [];
 
       const lastSignIn = auditLogs
         ?.find(log => log.operation === 'create' && !log.severity)
@@ -63,12 +72,16 @@ const UserRoleCard = ({ user, currentRole, onRoleChange }: UserRoleCardProps) =>
       <div className="flex items-center justify-between p-5 bg-dashboard-card/50 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-200">
         <div className="flex items-center space-x-4">
           <div>
-            <p className="text-dashboard-text font-medium">{user.email}</p>
+            <p className="text-dashboard-text font-medium">{user.full_name}</p>
             <p className="text-dashboard-muted text-sm">ID: {user.id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <RoleSelect currentRole={currentRole} onRoleChange={onRoleChange} />
+          <RoleSelect 
+            currentRole={user.role} 
+            userId={user.user_id} 
+            onRoleChange={(newRole) => onRoleChange(user.user_id, newRole)} 
+          />
           <button
             onClick={() => setShowDebug(!showDebug)}
             className="p-2 hover:bg-dashboard-hover rounded-full transition-colors"
