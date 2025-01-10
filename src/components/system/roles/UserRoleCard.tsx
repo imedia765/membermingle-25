@@ -138,11 +138,11 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between p-5 bg-dashboard-card/50 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-200">
+      <div className="flex items-center justify-between p-5 bg-dashboard-card/50 rounded-lg border border-dashboard-cardBorder hover:border-dashboard-cardBorderHover transition-all duration-200">
         <div className="flex items-center space-x-4">
           <div>
-            <p className="text-dashboard-text font-medium">{user.full_name}</p>
-            <p className="text-dashboard-muted text-sm">ID: {user.id}</p>
+            <p className="text-white font-medium">{user.full_name}</p>
+            <p className="text-dashboard-text text-sm">ID: {user.id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
@@ -153,40 +153,40 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
           />
           <button
             onClick={() => setShowDebug(!showDebug)}
-            className="p-2 hover:bg-dashboard-hover rounded-full transition-colors"
+            className="p-2 hover:bg-dashboard-cardHover rounded-full transition-colors"
           >
             {showDebug ? (
-              <ChevronUp className="h-5 w-5 text-dashboard-muted" />
+              <ChevronUp className="h-5 w-5 text-dashboard-text" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-dashboard-muted" />
+              <ChevronDown className="h-5 w-5 text-dashboard-text" />
             )}
           </button>
         </div>
       </div>
 
       {showDebug && debugInfo && (
-        <div className="px-5 py-4 bg-dashboard-card/30 rounded-lg border border-dashboard-border">
-          <h4 className="text-sm font-medium text-dashboard-accent2 mb-3">Debug Information</h4>
+        <div className="px-5 py-4 bg-dashboard-card/30 rounded-lg border border-dashboard-cardBorder">
+          <h4 className="text-sm font-medium text-dashboard-accent1 mb-3">Debug Information</h4>
           
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Metric</TableHead>
-                <TableHead>Value</TableHead>
+                <TableHead className="w-[200px] text-dashboard-accent2">Metric</TableHead>
+                <TableHead className="text-dashboard-accent2">Value</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="text-dashboard-muted">Last Sign In</TableCell>
-                <TableCell>{debugInfo.lastSignIn || 'Never'}</TableCell>
+                <TableCell className="text-dashboard-text">Last Sign In</TableCell>
+                <TableCell className="text-white">{debugInfo.lastSignIn || 'Never'}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="text-dashboard-muted">Session Status</TableCell>
+                <TableCell className="text-dashboard-text">Session Status</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
                     debugInfo.sessionStatus === 'active' 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-red-500/20 text-red-400'
+                      ? 'bg-dashboard-success/20 text-dashboard-success' 
+                      : 'bg-dashboard-error/20 text-dashboard-error'
                   }`}>
                     {debugInfo.sessionStatus}
                   </span>
@@ -194,8 +194,8 @@ const UserRoleCard = ({ user, onRoleChange }: UserRoleCardProps) => {
               </TableRow>
               {debugInfo.lastFailedAttempt && (
                 <TableRow>
-                  <TableCell className="text-dashboard-muted">Last Failed Attempt</TableCell>
-                  <TableCell className="text-red-400">{debugInfo.lastFailedAttempt}</TableCell>
+                  <TableCell className="text-dashboard-text">Last Failed Attempt</TableCell>
+                  <TableCell className="text-dashboard-error">{debugInfo.lastFailedAttempt}</TableCell>
                 </TableRow>
               )}
             </TableBody>

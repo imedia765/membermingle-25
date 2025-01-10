@@ -15,7 +15,7 @@ const RoleManagementHeader = ({ searchTerm, onSearchChange }: RoleManagementHead
         placeholder="Search by name or member number..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="pl-10 bg-dashboard-card/50 border-white/10 focus:border-white/20 text-dashboard-text placeholder:text-dashboard-muted"
+        className="pl-10 bg-dashboard-card/50 border-dashboard-cardBorder text-white placeholder:text-dashboard-muted focus:border-dashboard-accent1"
       />
     </div>
   );
