@@ -22,8 +22,8 @@ const SystemAnnouncements = () => {
       <h2 className="text-xl font-semibold mb-6 text-dashboard-accent1">System Announcements</h2>
       <div className="space-y-4">
         {announcements?.map((announcement) => (
-          <Alert key={announcement.id} variant={announcement.severity === "error" ? "destructive" : "default"}>
-            <AlertCircle className="h-4 w-4" />
+          <Alert key={announcement.id} variant={announcement.severity === "error" ? "destructive" : "default"} className="bg-dashboard-card border-dashboard-cardBorder">
+            <AlertCircle className="h-4 w-4 text-dashboard-accent2" />
             <AlertTitle className="text-dashboard-accent2">{announcement.title}</AlertTitle>
             <AlertDescription className="text-dashboard-text">
               {announcement.message}
