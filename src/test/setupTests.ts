@@ -1,6 +1,12 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { expect, afterEach, vi } from 'vitest';
+import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
+
+// Setup a basic DOM environment for tests
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
@@ -9,8 +15,13 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   resources: 'usable'
 });
 
-global.window = dom.window;
-global.document = dom.window.document;
+// Properly type the window object
+declare global {
+  interface Window extends globalThis.Window {}
+}
+
+global.window = dom.window as unknown as Window & typeof globalThis;
+global.document = window.document;
 global.navigator = {
   userAgent: 'node.js',
 } as Navigator;
@@ -36,6 +47,28 @@ global.window.matchMedia = vi.fn().mockImplementation(query => ({
   removeEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
 }));
+
+// Create a wrapper with providers for testing
+export const renderWithProviders = (ui: ReactNode) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        {ui}
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
+// Export vi for tests
+export { vi };
 
 // Cleanup after each test case
 afterEach(() => {

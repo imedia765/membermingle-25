@@ -8,5 +8,5 @@ export type Collector = {
   active: boolean;
   created_at: string;
   updated_at: string;
-  member_number: string;
+  member_number?: string; // Made optional to match the database response
 };

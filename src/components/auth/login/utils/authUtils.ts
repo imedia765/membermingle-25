@@ -33,8 +33,9 @@ export const verifyMember = async (memberNumber: string) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 1) {
-        console.log(`Waiting ${retryDelay}ms before attempt ${attempt}...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        const backoff = retryDelay * (1 + Math.random()); // Add random backoff
+        console.log(`Waiting ${backoff}ms before attempt ${attempt}...`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
       }
 
       console.log(`Attempt ${attempt} to verify member ${memberNumber}`);
@@ -63,8 +64,6 @@ export const verifyMember = async (memberNumber: string) => {
           if (attempt === maxRetries) {
             throw lastError;
           }
-          // Add a small random delay to prevent thundering herd
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
           continue;
         }
 
