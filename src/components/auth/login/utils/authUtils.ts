@@ -27,6 +27,7 @@ export const verifyMember = async (memberNumber: string) => {
   
   const maxRetries = 3;
   const retryDelay = 3000; // 3 seconds
+  let lastError = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -37,6 +38,14 @@ export const verifyMember = async (memberNumber: string) => {
 
       console.log(`Attempt ${attempt} to verify member ${memberNumber}`);
       
+      // First check if we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.log('Session error detected, clearing auth state...');
+        await clearAuthState();
+      }
+
+      // Add headers for CORS and cache control
       const { data: member, error: memberError } = await supabase
         .from('members')
         .select('id, member_number, status')
@@ -57,6 +66,7 @@ export const verifyMember = async (memberNumber: string) => {
           await clearAuthState();
         }
         
+        lastError = memberError;
         if (attempt === maxRetries) throw memberError;
         continue;
       }
@@ -68,6 +78,8 @@ export const verifyMember = async (memberNumber: string) => {
       console.log('Member verified:', member);
       return member;
     } catch (error: any) {
+      lastError = error;
+      
       if (error.message === 'Member not found or inactive') {
         throw error;
       }
@@ -83,7 +95,7 @@ export const verifyMember = async (memberNumber: string) => {
       console.error(`Error during verification (attempt ${attempt}):`, error);
       
       if (attempt === maxRetries) {
-        throw new Error('Unable to verify member. Please try again later.');
+        throw new Error(lastError?.message || 'Unable to verify member. Please try again later.');
       }
     }
   }
