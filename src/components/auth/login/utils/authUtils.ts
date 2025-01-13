@@ -2,13 +2,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { QueryClient } from '@tanstack/react-query';
 
 export const clearAuthState = async () => {
-  console.log('Clearing existing session...');
   try {
+    console.log('Clearing auth state...');
     await supabase.auth.signOut({ scope: 'local' });
     await new QueryClient().clear();
     localStorage.clear();
     sessionStorage.clear();
     
+    // Clear cookies
     document.cookie.split(";").forEach(c => {
       document.cookie = c.replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
@@ -25,7 +26,7 @@ export const verifyMember = async (memberNumber: string) => {
   console.log('Verifying member:', memberNumber);
   
   const maxRetries = 3;
-  const retryDelay = 3000; // 3 seconds between retries
+  const retryDelay = 3000; // 3 seconds
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -51,23 +52,18 @@ export const verifyMember = async (memberNumber: string) => {
           await clearAuthState();
         }
         
-        if (attempt === maxRetries) {
-          console.error('Max retries reached, throwing error');
-          throw memberError;
-        }
+        if (attempt === maxRetries) throw memberError;
         continue;
       }
 
       if (!member) {
-        console.log('No member found or inactive status');
         throw new Error('Member not found or inactive');
       }
 
-      console.log('Member verified successfully:', member);
+      console.log('Member verified:', member);
       return member;
     } catch (error: any) {
       if (error.message === 'Member not found or inactive') {
-        console.error('Member verification failed: Not found or inactive');
         throw error;
       }
       
@@ -82,7 +78,6 @@ export const verifyMember = async (memberNumber: string) => {
       console.error(`Error during verification (attempt ${attempt}):`, error);
       
       if (attempt === maxRetries) {
-        console.error('Max retries reached after errors');
         throw new Error('Unable to verify member. Please try again later.');
       }
     }
@@ -95,26 +90,3 @@ export const getAuthCredentials = (memberNumber: string) => ({
   email: `${memberNumber.toLowerCase()}@temp.com`,
   password: memberNumber,
 });
-
-export const handleSignInError = async (error: any, email: string, password: string) => {
-  console.error('Sign in error:', error);
-  
-  if (error.message?.includes('refresh_token_not_found') || 
-      error.message?.includes('token') || 
-      error.message?.includes('JWT')) {
-    console.log('Token error detected, clearing session and retrying...');
-    await clearAuthState();
-    
-    const { error: retryError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (retryError) {
-      console.error('Retry sign in failed:', retryError);
-      throw retryError;
-    }
-  } else {
-    throw error;
-  }
-};
