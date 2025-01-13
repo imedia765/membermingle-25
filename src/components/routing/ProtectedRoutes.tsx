@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import { Session } from "@supabase/supabase-js";
@@ -11,26 +11,29 @@ interface ProtectedRoutesProps {
 }
 
 const AuthWrapper = ({ session }: { session: Session | null }) => {
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = window.innerWidth <= 768;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      console.log('Auth state change in router:', event);
+      console.log('Auth state change in router:', event, {
+        platform: isMobile ? 'mobile' : 'desktop',
+        path: window.location.pathname
+      });
       
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !currentSession) {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !currentSession)) {
         console.log('User signed out or token refresh failed, redirecting to login');
-        navigate('/login', { replace: true });
+        window.location.href = '/login';
       } else if (event === 'SIGNED_IN' && currentSession) {
         console.log('User signed in, redirecting to home');
-        navigate('/', { replace: true });
+        window.location.href = '/';
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [toast, isMobile]);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {

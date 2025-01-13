@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export type UserRole = 'member' | 'collector' | 'admin' | null;
 
-const ROLE_STALE_TIME = 1000 * 60; // 1 minute - reduced from 5 minutes for faster role updates
+const ROLE_STALE_TIME = 1000 * 60; // 1 minute
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
@@ -72,13 +72,35 @@ export const useRoleAccess = () => {
           return 'admin' as UserRole;
         }
 
-        // Get all roles for the user
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionData.user.id);
+        // Get all roles for the user with retries
+        let retryCount = 0;
+        let roleData = null;
+        let lastError = null;
 
-        if (roleError) throw roleError;
+        while (retryCount < MAX_RETRIES) {
+          try {
+            const { data, error } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', sessionData.user.id);
+
+            if (error) throw error;
+            roleData = data;
+            break;
+          } catch (error) {
+            lastError = error;
+            retryCount++;
+            if (retryCount < MAX_RETRIES) {
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+              console.log(`Retrying role fetch attempt ${retryCount + 1}...`);
+            }
+          }
+        }
+
+        if (lastError && !roleData) {
+          console.error('Failed to fetch roles after retries:', lastError);
+          throw lastError;
+        }
 
         if (roleData && roleData.length > 0) {
           console.log('Found roles:', roleData);
@@ -144,6 +166,10 @@ export const useRoleAccess = () => {
     refetchOnMount: true,
   });
 
+  const hasRole = (role: UserRole): boolean => {
+    return userRole === role;
+  };
+
   const canAccessTab = (tab: string): boolean => {
     console.log('Checking access for tab:', tab, 'User role:', userRole);
     
@@ -171,5 +197,6 @@ export const useRoleAccess = () => {
     roleLoading: roleLoading || !sessionData,
     error: roleError,
     canAccessTab,
+    hasRole
   };
 };
