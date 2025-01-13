@@ -45,7 +45,12 @@ export const verifyMember = async (memberNumber: string) => {
         .maybeSingle();
 
       if (memberError) {
-        console.error(`Member verification error (attempt ${attempt}):`, memberError);
+        console.error(`Member verification error (attempt ${attempt}):`, {
+          message: memberError.message,
+          details: memberError.details,
+          hint: memberError.hint,
+          code: memberError.code
+        });
         
         if (memberError.message?.includes('JWT') || memberError.message?.includes('token')) {
           console.log('JWT/token error detected, clearing session...');
