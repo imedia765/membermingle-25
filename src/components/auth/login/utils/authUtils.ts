@@ -26,7 +26,7 @@ export const verifyMember = async (memberNumber: string) => {
   console.log('Verifying member:', memberNumber);
   
   const maxRetries = 3;
-  const retryDelay = 1000; // Reduced to 1 second
+  const retryDelay = 1000; // 1 second between retries
   let lastError = null;
 
   // Ensure we have a clean auth state before starting
@@ -59,11 +59,14 @@ export const verifyMember = async (memberNumber: string) => {
         if (memberError.message?.includes('Failed to fetch') || 
             memberError.code === '502' ||
             memberError.code === 'ECONNREFUSED' ||
-            memberError.message?.includes('NetworkError')) {
+            memberError.message?.includes('NetworkError') ||
+            memberError.message?.includes('Network Error')) {
           lastError = new Error('Network connection error. Please check your connection and try again.');
           if (attempt === maxRetries) {
             throw lastError;
           }
+          // Add a small random delay to prevent thundering herd
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
           continue;
         }
 
@@ -86,7 +89,8 @@ export const verifyMember = async (memberNumber: string) => {
       if (error.message?.includes('Failed to fetch') || 
           error.code === '502' ||
           error.code === 'ECONNREFUSED' ||
-          error.message?.includes('NetworkError')) {
+          error.message?.includes('NetworkError') ||
+          error.message?.includes('Network Error')) {
         console.error(`Network error during verification (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           throw new Error('Network connection error. Please check your connection and try again.');
