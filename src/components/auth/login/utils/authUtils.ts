@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const MAX_RETRIES = 3;
+const BASE_DELAY = 1000; // 1 second
+
 export const clearAuthState = async () => {
   try {
     console.log('Clearing auth state...');
@@ -23,19 +26,18 @@ export const clearAuthState = async () => {
 export const verifyMember = async (memberNumber: string) => {
   console.log('Verifying member:', memberNumber);
   
-  const maxRetries = 3;
-  const retryDelay = 1000; // 1 second between retries
-  let lastError = null;
+  let lastError: Error | null = null;
+  let attempt = 1;
 
-  // Ensure we have a clean auth state before starting
-  await clearAuthState();
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  while (attempt <= MAX_RETRIES) {
     try {
       if (attempt > 1) {
-        const backoff = retryDelay * (1 + Math.random()); // Add random backoff
-        console.log(`Waiting ${backoff}ms before attempt ${attempt}...`);
-        await new Promise(resolve => setTimeout(resolve, backoff));
+        // Exponential backoff with jitter
+        const delay = Math.min(BASE_DELAY * Math.pow(2, attempt - 1), 10000);
+        const jitter = Math.random() * 300;
+        const waitTime = delay + jitter;
+        console.log(`Waiting ${waitTime}ms before attempt ${attempt}...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
 
       console.log(`Attempt ${attempt} to verify member ${memberNumber}`);
@@ -58,12 +60,9 @@ export const verifyMember = async (memberNumber: string) => {
         if (memberError.message?.includes('Failed to fetch') || 
             memberError.code === '502' ||
             memberError.code === 'ECONNREFUSED' ||
-            memberError.message?.includes('NetworkError') ||
-            memberError.message?.includes('Network Error')) {
+            memberError.message?.includes('NetworkError')) {
           lastError = new Error('Network connection error. Please check your connection and try again.');
-          if (attempt === maxRetries) {
-            throw lastError;
-          }
+          attempt++;
           continue;
         }
 
@@ -76,6 +75,7 @@ export const verifyMember = async (memberNumber: string) => {
 
       console.log('Member verified:', member);
       return member;
+
     } catch (error: any) {
       lastError = error;
       
@@ -86,20 +86,21 @@ export const verifyMember = async (memberNumber: string) => {
       if (error.message?.includes('Failed to fetch') || 
           error.code === '502' ||
           error.code === 'ECONNREFUSED' ||
-          error.message?.includes('NetworkError') ||
-          error.message?.includes('Network Error')) {
+          error.message?.includes('NetworkError')) {
         console.error(`Network error during verification (attempt ${attempt}):`, error);
-        if (attempt === maxRetries) {
+        if (attempt === MAX_RETRIES) {
           throw new Error('Network connection error. Please check your connection and try again.');
         }
+        attempt++;
         continue;
       }
       
       console.error(`Error during verification (attempt ${attempt}):`, error);
       
-      if (attempt === maxRetries) {
+      if (attempt === MAX_RETRIES) {
         throw new Error(lastError?.message || 'Unable to verify member. Please try again later.');
       }
+      attempt++;
     }
   }
 
