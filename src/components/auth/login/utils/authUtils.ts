@@ -1,11 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import { QueryClient } from '@tanstack/react-query';
 
 export const clearAuthState = async () => {
   try {
     console.log('Clearing auth state...');
     await supabase.auth.signOut({ scope: 'local' });
-    await new QueryClient().clear();
     localStorage.clear();
     sessionStorage.clear();
     
