@@ -29,6 +29,9 @@ export const verifyMember = async (memberNumber: string) => {
   const retryDelay = 3000; // 3 seconds
   let lastError = null;
 
+  // Ensure we have a clean auth state before starting
+  await clearAuthState();
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 1) {
@@ -37,15 +40,8 @@ export const verifyMember = async (memberNumber: string) => {
       }
 
       console.log(`Attempt ${attempt} to verify member ${memberNumber}`);
-      
-      // First check if we have a valid session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.log('Session error detected, clearing auth state...');
-        await clearAuthState();
-      }
 
-      // Add headers for CORS and cache control
+      // Add retry-specific headers
       const { data: member, error: memberError } = await supabase
         .from('members')
         .select('id, member_number, status')
@@ -61,14 +57,23 @@ export const verifyMember = async (memberNumber: string) => {
           code: memberError.code
         });
         
+        // Network or connection errors should trigger retry
+        if (memberError.message?.includes('Failed to fetch') || 
+            memberError.message?.includes('NetworkError')) {
+          lastError = memberError;
+          if (attempt === maxRetries) {
+            throw new Error('Network connection error. Please check your connection and try again.');
+          }
+          continue;
+        }
+
+        // JWT/token errors should clear auth state
         if (memberError.message?.includes('JWT') || memberError.message?.includes('token')) {
           console.log('JWT/token error detected, clearing session...');
           await clearAuthState();
         }
         
-        lastError = memberError;
-        if (attempt === maxRetries) throw memberError;
-        continue;
+        throw memberError;
       }
 
       if (!member) {
