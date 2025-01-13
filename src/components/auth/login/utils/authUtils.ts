@@ -26,7 +26,7 @@ export const verifyMember = async (memberNumber: string) => {
   console.log('Verifying member:', memberNumber);
   
   const maxRetries = 3;
-  const retryDelay = 3000; // 3 seconds
+  const retryDelay = 1000; // Reduced to 1 second
   let lastError = null;
 
   // Ensure we have a clean auth state before starting
@@ -41,7 +41,6 @@ export const verifyMember = async (memberNumber: string) => {
 
       console.log(`Attempt ${attempt} to verify member ${memberNumber}`);
 
-      // Add retry-specific headers
       const { data: member, error: memberError } = await supabase
         .from('members')
         .select('id, member_number, status')
@@ -57,22 +56,17 @@ export const verifyMember = async (memberNumber: string) => {
           code: memberError.code
         });
         
-        // Network or connection errors should trigger retry
         if (memberError.message?.includes('Failed to fetch') || 
+            memberError.code === '502' ||
+            memberError.code === 'ECONNREFUSED' ||
             memberError.message?.includes('NetworkError')) {
-          lastError = memberError;
+          lastError = new Error('Network connection error. Please check your connection and try again.');
           if (attempt === maxRetries) {
-            throw new Error('Network connection error. Please check your connection and try again.');
+            throw lastError;
           }
           continue;
         }
 
-        // JWT/token errors should clear auth state
-        if (memberError.message?.includes('JWT') || memberError.message?.includes('token')) {
-          console.log('JWT/token error detected, clearing session...');
-          await clearAuthState();
-        }
-        
         throw memberError;
       }
 
@@ -89,7 +83,10 @@ export const verifyMember = async (memberNumber: string) => {
         throw error;
       }
       
-      if (error.message?.includes('Failed to fetch')) {
+      if (error.message?.includes('Failed to fetch') || 
+          error.code === '502' ||
+          error.code === 'ECONNREFUSED' ||
+          error.message?.includes('NetworkError')) {
         console.error(`Network error during verification (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           throw new Error('Network connection error. Please check your connection and try again.');
