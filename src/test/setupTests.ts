@@ -16,25 +16,10 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 // Properly type the window object
 declare global {
   interface Window {
-    matchMedia: (query: string) => {
-      matches: boolean;
-      media: string;
-      onchange: null;
-      addListener: (listener: () => void) => void;
-      removeListener: (listener: () => void) => void;
-      addEventListener: (type: string, listener: () => void) => void;
-      removeEventListener: (type: string, listener: () => void) => void;
-      dispatchEvent: (event: Event) => boolean;
-    };
+    matchMedia: (query: string) => MediaQueryList;
   }
-  var localStorage: {
-    getItem: (key: string) => string | null;
-    setItem: (key: string, value: string) => void;
-    removeItem: (key: string) => void;
-    clear: () => void;
-    length: number;
-    key: (index: number) => string | null;
-  };
+  var localStorage: Storage;
+  var sessionStorage: Storage;
 }
 
 global.window = dom.window as unknown as Window & typeof globalThis;
@@ -43,8 +28,8 @@ global.navigator = {
   userAgent: 'node.js',
 } as Navigator;
 
-// Mock localStorage
-global.localStorage = {
+// Mock localStorage and sessionStorage
+const mockStorage = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
@@ -52,6 +37,9 @@ global.localStorage = {
   length: 0,
   key: vi.fn(),
 };
+
+global.localStorage = mockStorage as Storage;
+global.sessionStorage = mockStorage as Storage;
 
 // Mock window.matchMedia
 global.window.matchMedia = vi.fn().mockImplementation(query => ({
@@ -65,7 +53,7 @@ global.window.matchMedia = vi.fn().mockImplementation(query => ({
   dispatchEvent: vi.fn(),
 }));
 
-// Mock fetch API with proper typing
+// Mock fetch API with proper response handling
 const mockFetch = vi.fn().mockImplementation(() => 
   Promise.resolve({
     ok: true,
@@ -77,13 +65,14 @@ const mockFetch = vi.fn().mockImplementation(() =>
     headers: new Headers(),
     status: 200,
     statusText: "OK",
+    clone: () => mockFetch(),
   })
 );
 
-global.fetch = mockFetch as unknown as typeof fetch;
-global.Headers = vi.fn() as unknown as typeof Headers;
-global.Request = vi.fn() as unknown as typeof Request;
-global.Response = vi.fn() as unknown as typeof Response;
+global.fetch = mockFetch;
+global.Headers = vi.fn(() => ({})) as unknown as typeof Headers;
+global.Request = vi.fn(() => ({})) as unknown as typeof Request;
+global.Response = vi.fn(() => ({})) as unknown as typeof Response;
 
 // Create a wrapper with providers for testing
 export const renderWithProviders = (ui: ReactNode) => {
@@ -112,4 +101,5 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
