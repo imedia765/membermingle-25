@@ -15,7 +15,26 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 // Properly type the window object
 declare global {
-  interface Window extends globalThis.Window {}
+  interface Window {
+    matchMedia: (query: string) => {
+      matches: boolean;
+      media: string;
+      onchange: null;
+      addListener: (listener: () => void) => void;
+      removeListener: (listener: () => void) => void;
+      addEventListener: (type: string, listener: () => void) => void;
+      removeEventListener: (type: string, listener: () => void) => void;
+      dispatchEvent: (event: Event) => boolean;
+    };
+  }
+  var localStorage: {
+    getItem: (key: string) => string | null;
+    setItem: (key: string, value: string) => void;
+    removeItem: (key: string) => void;
+    clear: () => void;
+    length: number;
+    key: (index: number) => string | null;
+  };
 }
 
 global.window = dom.window as unknown as Window & typeof globalThis;
@@ -46,11 +65,25 @@ global.window.matchMedia = vi.fn().mockImplementation(query => ({
   dispatchEvent: vi.fn(),
 }));
 
-// Mock fetch API
-global.fetch = vi.fn();
-global.Headers = vi.fn();
-global.Request = vi.fn();
-global.Response = vi.fn();
+// Mock fetch API with proper typing
+const mockFetch = vi.fn().mockImplementation(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(""),
+    blob: () => Promise.resolve(new Blob()),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    formData: () => Promise.resolve(new FormData()),
+    headers: new Headers(),
+    status: 200,
+    statusText: "OK",
+  })
+);
+
+global.fetch = mockFetch as unknown as typeof fetch;
+global.Headers = vi.fn() as unknown as typeof Headers;
+global.Request = vi.fn() as unknown as typeof Request;
+global.Response = vi.fn() as unknown as typeof Response;
 
 // Create a wrapper with providers for testing
 export const renderWithProviders = (ui: ReactNode) => {
