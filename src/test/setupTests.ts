@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
-// Setup a basic DOM environment for tests
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost:3000',
   pretendToBeVisual: true,
@@ -44,7 +43,7 @@ global.localStorage = mockStorage;
 global.sessionStorage = mockStorage;
 
 // Mock window.matchMedia
-window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+window.matchMedia = vi.fn().mockImplementation((query: string): MediaQueryList => ({
   matches: false,
   media: query,
   onchange: null,
