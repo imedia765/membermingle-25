@@ -1,14 +1,12 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { expect, afterEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { JSDOM } from 'jsdom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 // Setup a basic DOM environment for tests
-import { JSDOM } from 'jsdom';
-
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost:3000',
   pretendToBeVisual: true,
@@ -47,6 +45,12 @@ global.window.matchMedia = vi.fn().mockImplementation(query => ({
   removeEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
 }));
+
+// Mock fetch API
+global.fetch = vi.fn();
+global.Headers = vi.fn();
+global.Request = vi.fn();
+global.Response = vi.fn();
 
 // Create a wrapper with providers for testing
 export const renderWithProviders = (ui: ReactNode) => {
