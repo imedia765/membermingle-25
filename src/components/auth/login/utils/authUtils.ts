@@ -44,7 +44,7 @@ export const verifyMember = async (memberNumber: string) => {
 
       const { data: member, error: memberError } = await supabase
         .from('members')
-        .select('id, member_number, status')
+        .select('id, member_number, status, auth_user_id')
         .eq('member_number', memberNumber)
         .eq('status', 'active')
         .maybeSingle();
@@ -106,8 +106,3 @@ export const verifyMember = async (memberNumber: string) => {
 
   throw new Error('Failed to verify member after multiple attempts');
 };
-
-export const getAuthCredentials = (memberNumber: string) => ({
-  email: `${memberNumber.toLowerCase()}@temp.com`,
-  password: memberNumber,
-});
