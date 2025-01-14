@@ -14,11 +14,15 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 // Properly type the window object
 declare global {
-  interface Window {
-    matchMedia: (query: string) => MediaQueryList;
+  namespace NodeJS {
+    interface Global {
+      window: Window & typeof globalThis;
+      document: Document;
+      navigator: Navigator;
+      localStorage: Storage;
+      sessionStorage: Storage;
+    }
   }
-  var localStorage: Storage;
-  var sessionStorage: Storage;
 }
 
 // Set up window object
@@ -30,7 +34,7 @@ global.navigator = {
 } as Navigator;
 
 // Mock localStorage and sessionStorage
-const createStorageMock = (): Storage => ({
+const createStorageMock = () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
@@ -43,7 +47,7 @@ global.localStorage = createStorageMock();
 global.sessionStorage = createStorageMock();
 
 // Mock window.matchMedia
-window.matchMedia = vi.fn().mockImplementation((query: string): MediaQueryList => ({
+window.matchMedia = vi.fn().mockImplementation((query: string) => ({
   matches: false,
   media: query,
   onchange: null,
