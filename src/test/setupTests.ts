@@ -30,17 +30,17 @@ global.navigator = {
 } as Navigator;
 
 // Mock localStorage and sessionStorage
-const mockStorage: Storage = {
+const createStorageMock = (): Storage => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
   length: 0,
   key: vi.fn(),
-} as Storage;
+});
 
-global.localStorage = mockStorage;
-global.sessionStorage = mockStorage;
+global.localStorage = createStorageMock();
+global.sessionStorage = createStorageMock();
 
 // Mock window.matchMedia
 window.matchMedia = vi.fn().mockImplementation((query: string): MediaQueryList => ({
