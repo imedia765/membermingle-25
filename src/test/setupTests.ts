@@ -22,27 +22,29 @@ declare global {
   var sessionStorage: Storage;
 }
 
-global.window = dom.window as unknown as Window & typeof globalThis;
+// Set up window object
+const window = dom.window as unknown as Window & typeof globalThis;
+global.window = window;
 global.document = window.document;
 global.navigator = {
   userAgent: 'node.js',
 } as Navigator;
 
 // Mock localStorage and sessionStorage
-const mockStorage = {
+const mockStorage: Storage = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
   length: 0,
   key: vi.fn(),
-};
+} as Storage;
 
-global.localStorage = mockStorage as Storage;
-global.sessionStorage = mockStorage as Storage;
+global.localStorage = mockStorage;
+global.sessionStorage = mockStorage;
 
 // Mock window.matchMedia
-global.window.matchMedia = vi.fn().mockImplementation(query => ({
+window.matchMedia = vi.fn().mockImplementation((query: string) => ({
   matches: false,
   media: query,
   onchange: null,
@@ -65,7 +67,7 @@ const mockFetch = vi.fn().mockImplementation(() =>
     headers: new Headers(),
     status: 200,
     statusText: "OK",
-    clone: () => mockFetch(),
+    clone: function() { return this; },
   })
 );
 
@@ -84,7 +86,7 @@ export const renderWithProviders = (ui: ReactNode) => {
     },
   });
 
-  return render(
+  return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         {ui}
