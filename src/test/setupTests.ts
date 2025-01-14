@@ -1,10 +1,13 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { expect, afterEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
+import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+
+// Setup a basic DOM environment for tests
+import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost:3000',
@@ -14,40 +17,27 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 // Properly type the window object
 declare global {
-  namespace NodeJS {
-    interface Global {
-      window: Window & typeof globalThis;
-      document: Document;
-      navigator: Navigator;
-      localStorage: Storage;
-      sessionStorage: Storage;
-    }
-  }
+  interface Window extends globalThis.Window {}
 }
 
-// Set up window object
-const window = dom.window as unknown as Window & typeof globalThis;
-global.window = window;
+global.window = dom.window as unknown as Window & typeof globalThis;
 global.document = window.document;
 global.navigator = {
   userAgent: 'node.js',
 } as Navigator;
 
-// Mock localStorage and sessionStorage
-const createStorageMock = () => ({
+// Mock localStorage
+global.localStorage = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
   length: 0,
   key: vi.fn(),
-});
-
-global.localStorage = createStorageMock();
-global.sessionStorage = createStorageMock();
+};
 
 // Mock window.matchMedia
-window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+global.window.matchMedia = vi.fn().mockImplementation(query => ({
   matches: false,
   media: query,
   onchange: null,
@@ -57,27 +47,6 @@ window.matchMedia = vi.fn().mockImplementation((query: string) => ({
   removeEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
 }));
-
-// Mock fetch API with proper response handling
-const mockFetch = vi.fn().mockImplementation(() => 
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(""),
-    blob: () => Promise.resolve(new Blob()),
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-    formData: () => Promise.resolve(new FormData()),
-    headers: new Headers(),
-    status: 200,
-    statusText: "OK",
-    clone: function() { return this; },
-  })
-);
-
-global.fetch = mockFetch;
-global.Headers = vi.fn(() => ({})) as unknown as typeof Headers;
-global.Request = vi.fn(() => ({})) as unknown as typeof Request;
-global.Response = vi.fn(() => ({})) as unknown as typeof Response;
 
 // Create a wrapper with providers for testing
 export const renderWithProviders = (ui: ReactNode) => {
@@ -89,7 +58,7 @@ export const renderWithProviders = (ui: ReactNode) => {
     },
   });
 
-  return (
+  return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         {ui}
@@ -106,5 +75,4 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   localStorage.clear();
-  sessionStorage.clear();
 });
