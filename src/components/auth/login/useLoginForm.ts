@@ -18,7 +18,7 @@ export const useLoginForm = () => {
     
     try {
       setLoading(true);
-      console.log('Starting login process...');
+      console.log('Starting login process for member:', memberNumber);
 
       // Clear any existing sessions first
       await clearAuthState();
