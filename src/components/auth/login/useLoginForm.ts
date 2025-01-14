@@ -18,37 +18,54 @@ export const useLoginForm = () => {
     
     try {
       setLoading(true);
-      console.log('Starting login process...');
+      console.log('[Auth Debug] Starting login process for member:', memberNumber);
 
       // Clear any existing sessions first
       await clearAuthState();
-      console.log('Auth state cleared');
+      console.log('[Auth Debug] Auth state cleared');
 
-      // Verify member exists and is active
-      const member = await verifyMember(memberNumber);
-      console.log('Member verified:', member);
+      // Verify member exists and get their email
+      const { data: member, error: memberError } = await supabase
+        .from('members')
+        .select('id, email, status, auth_user_id')
+        .eq('member_number', memberNumber.trim())
+        .eq('status', 'active')
+        .maybeSingle();
 
-      if (!member.auth_user_id) {
+      if (memberError) {
+        console.error('[Auth Debug] Member verification error:', memberError);
+        throw new Error('Failed to verify member');
+      }
+
+      if (!member) {
+        console.log('[Auth Debug] Member not found or inactive:', memberNumber);
+        throw new Error('Member not found or inactive');
+      }
+
+      if (!member.auth_user_id || !member.email) {
+        console.error('[Auth Debug] Member not configured for login:', member);
         throw new Error('Member not configured for login. Please contact support.');
       }
 
-      // Attempt to sign in with member number
+      console.log('[Auth Debug] Member verified:', { id: member.id, email: member.email });
+
+      // Attempt to sign in with email and member number as password
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: memberNumber,
+        email: member.email,
         password: memberNumber,
       });
 
       if (signInError) {
-        console.error('Sign in error:', signInError);
+        console.error('[Auth Debug] Sign in error:', signInError);
         throw signInError;
       }
 
       if (!signInData.session) {
-        console.error('No session established');
+        console.error('[Auth Debug] No session established');
         throw new Error('Failed to establish session');
       }
 
-      console.log('Session established:', signInData.session);
+      console.log('[Auth Debug] Session established:', signInData.session);
 
       // Clear any cached data
       await queryClient.cancelQueries();
@@ -63,7 +80,7 @@ export const useLoginForm = () => {
       navigate('/', { replace: true });
       
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('[Auth Debug] Login error:', error);
       
       let errorMessage = 'An unexpected error occurred';
       
