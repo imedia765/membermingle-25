@@ -12,7 +12,7 @@ export const useAuthSession = () => {
 
   const handleSignOut = async (skipStorageClear = false) => {
     try {
-      console.log('Starting sign out process...');
+      console.log('[Auth Debug] Starting sign out process...');
       setLoading(true);
       
       await queryClient.resetQueries();
@@ -26,13 +26,13 @@ export const useAuthSession = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      console.log('Sign out successful');
+      console.log('[Auth Debug] Sign out successful');
       setSession(null);
       
       window.location.href = '/login';
       
     } catch (error: any) {
-      console.error('Error during sign out:', error);
+      console.error('[Auth Debug] Error during sign out:', error);
       toast({
         title: "Error signing out",
         description: error.message.includes('502') 
@@ -49,19 +49,19 @@ export const useAuthSession = () => {
     let mounted = true;
     let unsubscribe: (() => void) | undefined;
 
-    console.log('Initializing auth session...');
+    console.log('[Auth Debug] Initializing auth session...');
     
     const initializeSession = async () => {
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('[Auth Debug] Error getting session:', error);
           throw error;
         }
 
         if (mounted) {
-          console.log('Session initialized:', {
+          console.log('[Auth Debug] Session initialized:', {
             hasSession: !!currentSession,
             userId: currentSession?.user?.id
           });
@@ -70,7 +70,7 @@ export const useAuthSession = () => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Unexpected error during session initialization:', error);
+        console.error('[Auth Debug] Unexpected error during session initialization:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -81,7 +81,7 @@ export const useAuthSession = () => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
         if (!mounted) return;
 
-        console.log('Auth state changed:', {
+        console.log('[Auth Debug] Auth state changed:', {
           event,
           hasSession: !!currentSession,
           userId: currentSession?.user?.id
@@ -90,7 +90,7 @@ export const useAuthSession = () => {
         if (event === 'SIGNED_OUT') {
           setSession(null);
           queryClient.clear();
-          window.location.href = '/';
+          window.location.href = '/login';
         } else if (event === 'SIGNED_IN') {
           setSession(currentSession);
           window.location.href = '/';
@@ -111,7 +111,7 @@ export const useAuthSession = () => {
         unsubscribe();
       }
     };
-  }, [queryClient, toast]);
+  }, [queryClient]);
 
   return {
     session,
