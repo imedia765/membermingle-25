@@ -13,6 +13,8 @@ import { differenceInDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import PaymentDialog from './PaymentDialog';
+import { format } from 'date-fns';
+import { Card } from '@/components/ui/card';
 
 interface MemberCardProps {
   member: Member;
@@ -33,7 +35,6 @@ const MemberCard = ({ member, userRole, onPaymentClick, onEditClick }: MemberCar
   const { data: collectorInfo } = useQuery({
     queryKey: ['collector', member.collector],
     queryFn: async () => {
-      console.log('Fetching collector info for:', member.collector);
       if (!member.collector) return null;
       
       const { data, error } = await supabase
@@ -42,15 +43,25 @@ const MemberCard = ({ member, userRole, onPaymentClick, onEditClick }: MemberCar
         .eq('name', member.collector)
         .maybeSingle();
       
-      if (error) {
-        console.error('Error fetching collector:', error);
-        throw error;
-      }
-      
-      console.log('Fetched collector info:', data);
+      if (error) throw error;
       return data;
     },
     enabled: !!member.collector
+  });
+
+  // Fetch payment history
+  const { data: paymentHistory } = useQuery({
+    queryKey: ['payment-history', member.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payment_requests')
+        .select('*')
+        .eq('member_id', member.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
   });
 
   const handleSaveNote = async () => {
@@ -85,10 +96,48 @@ const MemberCard = ({ member, userRole, onPaymentClick, onEditClick }: MemberCar
       </AccordionTrigger>
 
       <AccordionContent>
-        <div className="space-y-4 py-4">
-          <p className="text-sm">Address: {member.address}</p>
-          <p className="text-sm">Email: {member.email}</p>
-          <p className="text-sm">Phone: {member.phone}</p>
+        <div className="space-y-6 py-4">
+          {/* Contact Information */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-500">Contact Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 p-3 rounded-lg">
+              <p className="text-sm">Email: {member.email || 'Not provided'}</p>
+              <p className="text-sm">Phone: {member.phone || 'Not provided'}</p>
+              <p className="text-sm">Date of Birth: {member.date_of_birth ? format(new Date(member.date_of_birth), 'dd/MM/yyyy') : 'Not provided'}</p>
+              <p className="text-sm">Gender: {member.gender || 'Not provided'}</p>
+            </div>
+          </div>
+
+          {/* Address Information */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-500">Address Details</h4>
+            <div className="bg-white/5 p-3 rounded-lg">
+              <p className="text-sm">Street: {member.address || 'Not provided'}</p>
+              <p className="text-sm">Town: {member.town || 'Not provided'}</p>
+              <p className="text-sm">Postcode: {member.postcode || 'Not provided'}</p>
+            </div>
+          </div>
+
+          {/* Payment History */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-500">Payment History</h4>
+            <div className="bg-white/5 p-3 rounded-lg">
+              {paymentHistory && paymentHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {paymentHistory.map((payment) => (
+                    <div key={payment.id} className="border-b border-white/10 pb-2">
+                      <p className="text-sm">Amount: £{payment.amount}</p>
+                      <p className="text-sm">Date: {format(new Date(payment.created_at), 'dd/MM/yyyy')}</p>
+                      <p className="text-sm">Status: {payment.status}</p>
+                      <p className="text-sm">Type: {payment.payment_type}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No payment history available</p>
+              )}
+            </div>
+          </div>
 
           {userRole === 'admin' && (
             <div>
