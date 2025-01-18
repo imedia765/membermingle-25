@@ -227,11 +227,37 @@ export const CollectorRolesList = () => {
     );
   }
 
+  const getRoleBadgeColor = (role: UserRole) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-dashboard-accent1 text-white';
+      case 'collector':
+        return 'bg-dashboard-accent2 text-white';
+      case 'member':
+        return 'bg-dashboard-accent3 text-white';
+      default:
+        return 'bg-dashboard-muted text-white';
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-dashboard-success text-white';
+      case 'pending':
+        return 'bg-dashboard-warning text-black';
+      case 'error':
+        return 'bg-dashboard-error text-white';
+      default:
+        return 'bg-dashboard-muted text-white';
+    }
+  };
+
   return (
     <div className="space-y-6 p-4">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-[#F2FCE2]">Active Collectors and Roles</h2>
-        <Badge variant="outline" className="text-[#D3E4FD]">
+        <h2 className="text-2xl font-semibold text-dashboard-softGreen">Active Collectors and Roles</h2>
+        <Badge variant="outline" className="text-dashboard-softBlue">
           {collectors?.length || 0} Collectors
         </Badge>
       </div>
@@ -240,54 +266,60 @@ export const CollectorRolesList = () => {
         <Table>
           <TableHeader>
             <TableRow className="border-dashboard-cardBorder hover:bg-dashboard-card/50">
-              <TableHead className="text-[#F2FCE2]">Collector</TableHead>
-              <TableHead className="text-[#F2FCE2]">Member #</TableHead>
-              <TableHead className="text-[#F2FCE2]">Contact Info</TableHead>
-              <TableHead className="text-[#F2FCE2]">Roles & Access</TableHead>
-              <TableHead className="text-[#F2FCE2]">Role History</TableHead>
-              <TableHead className="text-[#F2FCE2]">Enhanced Role Status</TableHead>
-              <TableHead className="text-[#F2FCE2]">Role Store Status</TableHead>
-              <TableHead className="text-[#F2FCE2]">Sync Status</TableHead>
-              <TableHead className="text-[#F2FCE2]">Permissions</TableHead>
+              <TableHead className="text-dashboard-softGreen">Collector</TableHead>
+              <TableHead className="text-dashboard-softGreen">Member #</TableHead>
+              <TableHead className="text-dashboard-softGreen">Contact Info</TableHead>
+              <TableHead className="text-dashboard-softGreen">Roles & Access</TableHead>
+              <TableHead className="text-dashboard-softGreen">Role History</TableHead>
+              <TableHead className="text-dashboard-softGreen">Enhanced Role Status</TableHead>
+              <TableHead className="text-dashboard-softGreen">Role Store Status</TableHead>
+              <TableHead className="text-dashboard-softGreen">Sync Status</TableHead>
+              <TableHead className="text-dashboard-softGreen">Permissions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {collectors.map((collector) => (
               <TableRow 
                 key={collector.member_number}
-                className="border-dashboard-cardBorder hover:bg-dashboard-card/50"
+                className="border-dashboard-cardBorder hover:bg-dashboard-cardHover"
               >
-                <TableCell className="font-medium text-[#F3F3F3]">
+                <TableCell className="font-medium text-dashboard-accent1">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-dashboard-accent1" />
                     {collector.full_name}
                   </div>
                 </TableCell>
-                <TableCell className="text-[#D6BCFA]">
+                <TableCell className="text-dashboard-accent2">
                   <div className="flex flex-col">
                     <span>{collector.member_number}</span>
-                    <span className="text-sm text-[#9B87F5]">{collector.prefix}-{collector.number}</span>
+                    <span className="text-sm text-dashboard-accent1">{collector.prefix}-{collector.number}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-[#F3F3F3]">
-                  <div className="flex flex-col">
+                <TableCell>
+                  <div className="flex flex-col text-dashboard-text">
                     <span>{collector.email}</span>
                     <span>{collector.phone}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <RoleAssignment
-                    currentRoles={collector.roles}
-                    onRoleChange={(role, action) => handleRoleChange(collector.auth_user_id, role, action)}
-                    isLoading={roleLoading}
-                  />
+                  <div className="space-y-1">
+                    {collector.roles.map((role, idx) => (
+                      <Badge 
+                        key={idx}
+                        className={getRoleBadgeColor(role)}
+                      >
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
-                <TableCell className="text-[#F1F0FB]">
+                <TableCell className="text-dashboard-text">
                   <div className="flex flex-col gap-1">
                     {collector.role_details.map((detail, idx) => (
                       <div key={idx} className="text-sm flex items-center gap-2">
-                        <Shield className="h-3 w-3" />
-                        {detail.role}: {format(new Date(detail.created_at), 'PPp')}
+                        <Shield className="h-3 w-3 text-dashboard-accent2" />
+                        <span className="text-dashboard-accent1">{detail.role}:</span>
+                        <span>{format(new Date(detail.created_at), 'PPp')}</span>
                       </div>
                     ))}
                   </div>
@@ -297,8 +329,7 @@ export const CollectorRolesList = () => {
                     {collector.enhanced_roles.map((role, idx) => (
                       <Badge 
                         key={idx}
-                        variant={role.is_active ? "default" : "secondary"}
-                        className="mr-1"
+                        className={role.is_active ? 'bg-dashboard-success text-white' : 'bg-dashboard-muted text-white'}
                       >
                         {role.role_name}
                       </Badge>
@@ -306,25 +337,25 @@ export const CollectorRolesList = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={collector.sync_status?.store_status === 'ready' ? 'default' : 'secondary'}>
+                  <Badge className={getStatusBadgeColor(collector.sync_status?.store_status || 'pending')}>
                     {collector.sync_status?.store_status || 'N/A'}
                   </Badge>
                   {collector.sync_status?.store_error && (
-                    <div className="text-sm text-red-500 mt-1">
+                    <div className="text-sm text-dashboard-error mt-1">
                       {collector.sync_status.store_error}
                     </div>
                   )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Badge variant={collector.sync_status?.status === 'completed' ? 'default' : 'secondary'}>
+                    <Badge className={getStatusBadgeColor(collector.sync_status?.status || 'pending')}>
                       {collector.sync_status?.status || 'pending'}
                     </Badge>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleSync(collector.auth_user_id)}
-                      className="ml-2"
+                      className="ml-2 hover:bg-dashboard-cardHover"
                     >
                       <RefreshCw className="h-3 w-3" />
                     </Button>
