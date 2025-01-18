@@ -4,118 +4,111 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from '@tanstack/react-query';
 
-export const useAuthSession = () => {
+export function useAuthSession() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleSignOut = async (skipStorageClear = false) => {
+    console.log('Starting sign out process...');
+    if (isLoggingOut) {
+      console.log('Logout already in progress, skipping...');
+      return;
+    }
+
     try {
-      console.log('[Auth Debug] Starting sign out process...');
+      setIsLoggingOut(true);
       setLoading(true);
       
+      console.log('Clearing query cache...');
       await queryClient.resetQueries();
       await queryClient.clear();
       
       if (!skipStorageClear) {
+        console.log('Clearing local storage...');
         localStorage.clear();
         sessionStorage.clear();
       }
       
+      console.log('Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      console.log('[Auth Debug] Sign out successful');
+      console.log('Sign out successful');
       setSession(null);
-      
       window.location.href = '/login';
       
     } catch (error: any) {
-      console.error('[Auth Debug] Error during sign out:', error);
+      console.error('Error during sign out:', error);
       toast({
         title: "Error signing out",
         description: error.message.includes('502') 
-          ? "Network connection error. Please check your connection and try again."
+          ? "Failed to connect to the server. Please check your network connection and try again."
           : error.message,
         variant: "destructive",
       });
     } finally {
+      setIsLoggingOut(false);
       setLoading(false);
     }
   };
 
   useEffect(() => {
     let mounted = true;
-    let unsubscribe: (() => void) | undefined;
+    console.log('Auth session hook mounted');
 
-    console.log('[Auth Debug] Initializing auth session...');
-    
     const initializeSession = async () => {
       try {
+        console.log('Initializing session...');
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('[Auth Debug] Error getting session:', error);
+          console.error('Session initialization error:', error);
           throw error;
         }
-
+        
         if (mounted) {
-          console.log('[Auth Debug] Session initialized:', {
-            hasSession: !!currentSession,
-            userId: currentSession?.user?.id
-          });
-          
+          console.log('Setting session state:', !!currentSession);
           setSession(currentSession);
           setLoading(false);
         }
       } catch (error) {
-        console.error('[Auth Debug] Unexpected error during session initialization:', error);
+        console.error('Session initialization failed:', error);
         if (mounted) {
           setLoading(false);
         }
       }
     };
 
-    const setupAuthListener = () => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        if (!mounted) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!mounted) return;
 
-        console.log('[Auth Debug] Auth state changed:', {
-          event,
-          hasSession: !!currentSession,
-          userId: currentSession?.user?.id
-        });
+      console.log('Auth state changed:', event, !!currentSession);
+      
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !currentSession)) {
+        console.log('User signed out or token refresh failed');
+        window.location.href = '/login';
+        return;
+      }
 
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          queryClient.clear();
-          window.location.href = '/login';
-        } else if (event === 'SIGNED_IN') {
-          setSession(currentSession);
-          window.location.href = '/';
-        } else {
-          setSession(currentSession);
-        }
-      });
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('User signed in or token refreshed');
+        setSession(currentSession);
+        queryClient.invalidateQueries({ queryKey: ['userRoles'] });
+      }
+      
+      setLoading(false);
+    });
 
-      unsubscribe = subscription.unsubscribe;
-    };
-
-    setupAuthListener();
     initializeSession();
 
     return () => {
       mounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      subscription.unsubscribe();
     };
-  }, [queryClient]);
+  }, [queryClient, toast]);
 
-  return {
-    session,
-    loading,
-    handleSignOut
-  };
-};
+  return { session, loading, handleSignOut };
+}
