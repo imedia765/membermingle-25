@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, User, Shield, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, User, Shield, RefreshCw, Plus } from "lucide-react";
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -152,16 +152,7 @@ export const CollectorRolesList = () => {
     }
   });
 
-  const handleRoleChange = async (userId: string, role: string, action: 'add' | 'remove') => {
-    if (!isValidRole(role)) {
-      toast({
-        title: "Invalid role",
-        description: `The role "${role}" is not a valid role`,
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleRoleChange = async (userId: string, role: UserRole, action: 'add' | 'remove') => {
     try {
       if (action === 'add') {
         const { error } = await supabase
@@ -201,6 +192,7 @@ export const CollectorRolesList = () => {
         title: "Sync initiated",
         description: "Role synchronization process has started",
       });
+      await queryClient.invalidateQueries({ queryKey: ['collectors-roles'] });
     } catch (error) {
       toast({
         title: "Sync failed",
@@ -241,7 +233,7 @@ export const CollectorRolesList = () => {
   };
 
   const getStatusBadgeColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
         return 'bg-dashboard-success text-white';
       case 'pending':
@@ -257,9 +249,16 @@ export const CollectorRolesList = () => {
     <div className="space-y-6 p-4">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold text-dashboard-softGreen">Active Collectors and Roles</h2>
-        <Badge variant="outline" className="text-dashboard-softBlue">
-          {collectors?.length || 0} Collectors
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-dashboard-softBlue">
+            {collectors?.length || 0} Collectors
+          </Badge>
+          <RoleAssignment
+            currentRoles={userRoles}
+            onRoleChange={(role, action) => handleRoleChange(userRole || '', role, action)}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       <Card className="p-6 bg-dashboard-card border-dashboard-cardBorder">
@@ -302,15 +301,26 @@ export const CollectorRolesList = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
-                    {collector.roles.map((role, idx) => (
-                      <Badge 
-                        key={idx}
-                        className={getRoleBadgeColor(role)}
-                      >
-                        {role}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      {collector.roles.map((role, idx) => (
+                        <Badge 
+                          key={idx}
+                          className={getRoleBadgeColor(role)}
+                        >
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRoleChange(collector.auth_user_id, 'collector', 'add')}
+                      className="flex items-center gap-2 hover:bg-dashboard-cardHover"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Role
+                    </Button>
                   </div>
                 </TableCell>
                 <TableCell className="text-dashboard-text">
