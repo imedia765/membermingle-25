@@ -30,12 +30,12 @@ const isValidRole = (role: string): role is UserRole => {
 interface SyncStatus {
   id: string;
   user_id: string;
-  sync_started_at: string;
-  last_attempted_sync_at: string;
+  sync_started_at: string | null;
+  last_attempted_sync_at: string | null;
   status: string;
-  error_message: string;
+  error_message: string | null;
   store_status: string;
-  store_error: string;
+  store_error: string | null;
 }
 
 interface CollectorInfo {
@@ -197,6 +197,7 @@ export const CollectorRolesList = () => {
   const handleSync = async (userId: string) => {
     try {
       await syncRoles([userId]);
+      await queryClient.invalidateQueries({ queryKey: ['collectors-roles'] });
       toast({
         title: "Sync initiated",
         description: "Role synchronization process has started",
@@ -207,6 +208,21 @@ export const CollectorRolesList = () => {
         description: error instanceof Error ? error.message : "An error occurred during sync",
         variant: "destructive",
       });
+    }
+  };
+
+  const getStatusBadgeColor = (status: string | undefined) => {
+    if (!status) return 'bg-dashboard-muted text-white';
+    
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'bg-dashboard-success text-white';
+      case 'pending':
+        return 'bg-dashboard-warning text-black';
+      case 'error':
+        return 'bg-dashboard-error text-white';
+      default:
+        return 'bg-dashboard-muted text-white';
     }
   };
 
@@ -226,32 +242,6 @@ export const CollectorRolesList = () => {
       </div>
     );
   }
-
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-dashboard-accent1 text-white';
-      case 'collector':
-        return 'bg-dashboard-accent2 text-white';
-      case 'member':
-        return 'bg-dashboard-accent3 text-white';
-      default:
-        return 'bg-dashboard-muted text-white';
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-dashboard-success text-white';
-      case 'pending':
-        return 'bg-dashboard-warning text-black';
-      case 'error':
-        return 'bg-dashboard-error text-white';
-      default:
-        return 'bg-dashboard-muted text-white';
-    }
-  };
 
   return (
     <div className="space-y-6 p-4">
@@ -302,15 +292,24 @@ export const CollectorRolesList = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
-                    {collector.roles.map((role, idx) => (
-                      <Badge 
-                        key={idx}
-                        className={getRoleBadgeColor(role)}
-                      >
-                        {role}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      {collector.roles.map((role, idx) => (
+                        <Badge 
+                          key={idx}
+                          className={`mr-1 ${role === 'admin' ? 'bg-dashboard-accent1' : 
+                                          role === 'collector' ? 'bg-dashboard-accent2' : 
+                                          'bg-dashboard-accent3'} text-white`}
+                        >
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
+                    <RoleAssignment 
+                      userId={collector.auth_user_id}
+                      currentRoles={collector.roles}
+                      onRoleChange={handleRoleChange}
+                    />
                   </div>
                 </TableCell>
                 <TableCell className="text-dashboard-text">
@@ -337,7 +336,9 @@ export const CollectorRolesList = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={getStatusBadgeColor(collector.sync_status?.store_status || 'pending')}>
+                  <Badge 
+                    className={getStatusBadgeColor(collector.sync_status?.store_status)}
+                  >
                     {collector.sync_status?.store_status || 'N/A'}
                   </Badge>
                   {collector.sync_status?.store_error && (
@@ -348,7 +349,9 @@ export const CollectorRolesList = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Badge className={getStatusBadgeColor(collector.sync_status?.status || 'pending')}>
+                    <Badge 
+                      className={getStatusBadgeColor(collector.sync_status?.status)}
+                    >
                       {collector.sync_status?.status || 'pending'}
                     </Badge>
                     <Button
