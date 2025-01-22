@@ -37,9 +37,9 @@ export const CollectorRolesRow = ({
     }
   };
 
-  const handleRoleChange = (userId: string, role: UserRole) => {
+  const handleRoleChange = async (userId: string, role: UserRole): Promise<void> => {
     const isAssigned = collector.roles.includes(role);
-    onRoleChange(userId, role, isAssigned ? 'remove' : 'add');
+    await onRoleChange(userId, role, isAssigned ? 'remove' : 'add');
   };
 
   return (
