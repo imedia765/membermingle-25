@@ -31,7 +31,7 @@ const CollectorRolesList = () => {
           (collectorsData || []).map(async (collector) => {
             const authUserId = collector.members?.[0]?.auth_user_id;
             
-            // Skip role queries if no auth_user_id
+            // If no auth_user_id, return basic info without role data
             if (!authUserId) {
               console.log(`No auth_user_id found for collector: ${collector.name}`);
               return {
@@ -45,53 +45,88 @@ const CollectorRolesList = () => {
                 prefix: collector.prefix || '',
                 number: collector.number || '',
                 enhanced_roles: [],
-                sync_status: undefined
+                sync_status: {
+                  status: 'pending',
+                  store_status: 'pending',
+                  last_attempted_sync_at: null,
+                  store_error: 'No auth user ID associated'
+                }
               };
             }
 
-            const [userRolesResult, enhancedRolesResult, syncStatusResult] = await Promise.all([
-              supabase
-                .from('user_roles')
-                .select('role, created_at')
-                .eq('user_id', authUserId),
-              supabase
-                .from('enhanced_roles')
-                .select('role_name, is_active')
-                .eq('user_id', authUserId),
-              supabase
-                .from('sync_status')
-                .select('*')
-                .eq('user_id', authUserId)
-                .maybeSingle()
-            ]);
+            try {
+              const [userRolesResult, enhancedRolesResult, syncStatusResult] = await Promise.all([
+                supabase
+                  .from('user_roles')
+                  .select('role, created_at')
+                  .eq('user_id', authUserId),
+                supabase
+                  .from('enhanced_roles')
+                  .select('role_name, is_active')
+                  .eq('user_id', authUserId),
+                supabase
+                  .from('sync_status')
+                  .select('*')
+                  .eq('user_id', authUserId)
+                  .maybeSingle()
+              ]);
 
-            const validRoles = (userRolesResult.data || [])
-              .map(ur => ur.role)
-              .filter((role): role is UserRole => 
-                ['admin', 'collector', 'member'].includes(role));
+              if (userRolesResult.error) throw userRolesResult.error;
+              if (enhancedRolesResult.error) throw enhancedRolesResult.error;
+              if (syncStatusResult.error) throw syncStatusResult.error;
 
-            return {
-              full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
-              member_number: collector.member_number || '',
-              roles: validRoles,
-              auth_user_id: authUserId,
-              role_details: (userRolesResult.data || [])
-                .filter((ur): ur is { role: UserRole; created_at: string } => 
-                  ['admin', 'collector', 'member'].includes(ur.role))
-                .map(ur => ({
-                  role: ur.role,
-                  created_at: ur.created_at
+              const validRoles = (userRolesResult.data || [])
+                .map(ur => ur.role)
+                .filter((role): role is UserRole => 
+                  ['admin', 'collector', 'member'].includes(role));
+
+              return {
+                full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
+                member_number: collector.member_number || '',
+                roles: validRoles,
+                auth_user_id: authUserId,
+                role_details: (userRolesResult.data || [])
+                  .filter((ur): ur is { role: UserRole; created_at: string } => 
+                    ['admin', 'collector', 'member'].includes(ur.role))
+                  .map(ur => ({
+                    role: ur.role,
+                    created_at: ur.created_at
+                  })),
+                email: collector.email || '',
+                phone: collector.phone || '',
+                prefix: collector.prefix || '',
+                number: collector.number || '',
+                enhanced_roles: (enhancedRolesResult.data || []).map(er => ({
+                  role_name: er.role_name,
+                  is_active: er.is_active || false
                 })),
-              email: collector.email || '',
-              phone: collector.phone || '',
-              prefix: collector.prefix || '',
-              number: collector.number || '',
-              enhanced_roles: (enhancedRolesResult.data || []).map(er => ({
-                role_name: er.role_name,
-                is_active: er.is_active || false
-              })),
-              sync_status: syncStatusResult.data || undefined
-            };
+                sync_status: syncStatusResult.data || {
+                  status: 'pending',
+                  store_status: 'pending',
+                  last_attempted_sync_at: null
+                }
+              };
+            } catch (error) {
+              console.error('Error fetching role data:', error);
+              return {
+                full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
+                member_number: collector.member_number || '',
+                roles: [],
+                auth_user_id: authUserId,
+                role_details: [],
+                email: collector.email || '',
+                phone: collector.phone || '',
+                prefix: collector.prefix || '',
+                number: collector.number || '',
+                enhanced_roles: [],
+                sync_status: {
+                  status: 'error',
+                  store_status: 'error',
+                  last_attempted_sync_at: null,
+                  store_error: error instanceof Error ? error.message : 'Unknown error occurred'
+                }
+              };
+            }
           })
         );
 
@@ -159,6 +194,15 @@ const CollectorRolesList = () => {
 
   const handleSync = async (userId: string) => {
     try {
+      if (!userId || userId.trim() === '') {
+        toast({
+          title: "Error",
+          description: "Invalid user ID for sync",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await supabase
         .from('sync_status')
         .upsert({
