@@ -107,6 +107,16 @@ const CollectorRolesList = () => {
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
     try {
+      // Validate userId before proceeding
+      if (!userId || userId.trim() === '') {
+        toast({
+          title: "Error",
+          description: "Invalid user ID provided",
+          variant: "destructive",
+        });
+        return;
+      }
+
       console.log('Updating role for user:', userId, 'to:', role);
       
       const { error: deleteError } = await supabase
