@@ -50,14 +50,14 @@ export const RoleVerificationPanel = ({ collector }: RoleVerificationPanelProps)
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <div className="text-sm text-dashboard-muted">Role Status</div>
+          <div className="text-sm text-dashboard-muted">Auth Status</div>
           <div className="flex items-center gap-2">
-            {hasCollectorRole ? (
+            {hasAuthId ? (
               <CheckCircle2 className="w-4 h-4 text-green-500" />
             ) : (
               <XCircle className="w-4 h-4 text-red-500" />
             )}
-            <span>Collector Role</span>
+            <span>{hasAuthId ? 'Auth ID Present' : 'No Auth ID'}</span>
           </div>
         </div>
         <div className="space-y-2">

@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { CollectorInfo, UserRole } from '@/types/collector-roles';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { CollectorInfo, UserRole } from "@/types/collector-roles";
 
 export const useCollectorRoles = () => {
   const { toast } = useToast();
@@ -18,7 +18,9 @@ export const useCollectorRoles = () => {
             members!inner (
               full_name,
               auth_user_id,
-              member_number
+              member_number,
+              email,
+              phone
             )
           `)
           .eq('active', true);
@@ -43,10 +45,6 @@ export const useCollectorRoles = () => {
                 number: collector.number || '',
                 enhanced_roles: [],
                 sync_status: {
-                  id: '',
-                  user_id: '',
-                  sync_started_at: null,
-                  last_attempted_sync_at: null,
                   status: 'pending',
                   error_message: 'No auth user ID associated',
                   store_status: 'pending',
@@ -82,10 +80,6 @@ export const useCollectorRoles = () => {
               number: collector.number || '',
               enhanced_roles: [],
               sync_status: syncStatus.data || {
-                id: '',
-                user_id: authUserId,
-                sync_started_at: null,
-                last_attempted_sync_at: null,
                 status: 'pending',
                 error_message: null,
                 store_status: 'pending',
@@ -103,37 +97,42 @@ export const useCollectorRoles = () => {
     }
   });
 
-  const handleRoleChange = async (userId: string, role: UserRole) => {
+  const handleRoleChange = async (userId: string, role: UserRole, action: 'add' | 'remove') => {
     if (!userId) {
       toast({
         title: "Error",
-        description: "Invalid user ID provided",
+        description: "No auth user ID associated with this collector",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: userId, 
-          role: role 
-        });
-
-      if (error) throw error;
+      if (action === 'add') {
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', role);
+        if (error) throw error;
+      }
 
       await queryClient.invalidateQueries({ queryKey: ['collectors-roles'] });
       
       toast({
-        title: "Role Updated",
-        description: `User role has been updated to ${role}`,
+        title: "Success",
+        description: `Role ${action === 'add' ? 'added' : 'removed'} successfully`,
       });
     } catch (error) {
       console.error('Role change error:', error);
       toast({
         title: "Error",
-        description: "Failed to update user role",
+        description: error instanceof Error ? error.message : "Failed to update role",
         variant: "destructive",
       });
     }
@@ -143,7 +142,7 @@ export const useCollectorRoles = () => {
     if (!userId) {
       toast({
         title: "Error",
-        description: "Invalid user ID for sync",
+        description: "No auth user ID associated with this collector",
         variant: "destructive",
       });
       return;
@@ -151,18 +150,17 @@ export const useCollectorRoles = () => {
 
     try {
       await supabase.rpc('perform_user_roles_sync');
-      
       await queryClient.invalidateQueries({ queryKey: ['collectors-roles'] });
 
       toast({
-        title: "Sync Complete",
-        description: "User roles have been synchronized",
+        title: "Success",
+        description: "Roles synchronized successfully",
       });
     } catch (error) {
       console.error('Sync error:', error);
       toast({
         title: "Error",
-        description: "Failed to sync user roles",
+        description: error instanceof Error ? error.message : "Failed to sync roles",
         variant: "destructive",
       });
     }
