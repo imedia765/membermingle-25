@@ -29,23 +29,43 @@ const CollectorRolesList = () => {
 
         const transformedData: CollectorInfo[] = await Promise.all(
           (collectorsData || []).map(async (collector) => {
-            const { data: userRoles } = await supabase
-              .from('user_roles')
-              .select('role, created_at')
-              .eq('user_id', collector.members?.[0]?.auth_user_id);
+            const authUserId = collector.members?.[0]?.auth_user_id;
+            
+            // Skip role queries if no auth_user_id
+            if (!authUserId) {
+              console.log(`No auth_user_id found for collector: ${collector.name}`);
+              return {
+                full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
+                member_number: collector.member_number || '',
+                roles: [],
+                auth_user_id: '',
+                role_details: [],
+                email: collector.email || '',
+                phone: collector.phone || '',
+                prefix: collector.prefix || '',
+                number: collector.number || '',
+                enhanced_roles: [],
+                sync_status: undefined
+              };
+            }
 
-            const { data: enhancedRoles } = await supabase
-              .from('enhanced_roles')
-              .select('role_name, is_active')
-              .eq('user_id', collector.members?.[0]?.auth_user_id);
+            const [userRolesResult, enhancedRolesResult, syncStatusResult] = await Promise.all([
+              supabase
+                .from('user_roles')
+                .select('role, created_at')
+                .eq('user_id', authUserId),
+              supabase
+                .from('enhanced_roles')
+                .select('role_name, is_active')
+                .eq('user_id', authUserId),
+              supabase
+                .from('sync_status')
+                .select('*')
+                .eq('user_id', authUserId)
+                .maybeSingle()
+            ]);
 
-            const { data: syncStatus } = await supabase
-              .from('sync_status')
-              .select('*')
-              .eq('user_id', collector.members?.[0]?.auth_user_id)
-              .maybeSingle();
-
-            const validRoles = (userRoles || [])
+            const validRoles = (userRolesResult.data || [])
               .map(ur => ur.role)
               .filter((role): role is UserRole => 
                 ['admin', 'collector', 'member'].includes(role));
@@ -54,8 +74,8 @@ const CollectorRolesList = () => {
               full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
               member_number: collector.member_number || '',
               roles: validRoles,
-              auth_user_id: collector.members?.[0]?.auth_user_id || '',
-              role_details: (userRoles || [])
+              auth_user_id: authUserId,
+              role_details: (userRolesResult.data || [])
                 .filter((ur): ur is { role: UserRole; created_at: string } => 
                   ['admin', 'collector', 'member'].includes(ur.role))
                 .map(ur => ({
@@ -66,11 +86,11 @@ const CollectorRolesList = () => {
               phone: collector.phone || '',
               prefix: collector.prefix || '',
               number: collector.number || '',
-              enhanced_roles: (enhancedRoles || []).map(er => ({
+              enhanced_roles: (enhancedRolesResult.data || []).map(er => ({
                 role_name: er.role_name,
                 is_active: er.is_active || false
               })),
-              sync_status: syncStatus || undefined
+              sync_status: syncStatusResult.data || undefined
             };
           })
         );

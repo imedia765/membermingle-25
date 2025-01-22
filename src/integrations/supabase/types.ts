@@ -487,7 +487,15 @@ export type Database = {
           prefix?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "members_collectors_member_number_fkey"
+            columns: ["member_number"]
+            isOneToOne: true
+            referencedRelation: "members"
+            referencedColumns: ["member_number"]
+          },
+        ]
       }
       monitoring_logs: {
         Row: {
