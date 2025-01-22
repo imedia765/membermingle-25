@@ -20,7 +20,6 @@ const CollectorRolesList = () => {
     queryFn: async () => {
       try {
         console.log('Fetching collectors data...');
-        // First, get all active collectors
         const { data: collectorsData, error: collectorsError } = await supabase
           .from('members_collectors')
           .select('*, members(full_name, auth_user_id)')
@@ -28,7 +27,6 @@ const CollectorRolesList = () => {
 
         if (collectorsError) throw collectorsError;
 
-        // Then fetch roles and enhanced roles for each collector
         const transformedData: CollectorInfo[] = await Promise.all(
           (collectorsData || []).map(async (collector) => {
             const { data: userRoles } = await supabase
@@ -105,10 +103,7 @@ const CollectorRolesList = () => {
         throw insertError;
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['collectors-roles'] }),
-        queryClient.invalidateQueries({ queryKey: ['user-roles'] })
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['collectors-roles'] });
 
       toast({
         title: "Role Updated",

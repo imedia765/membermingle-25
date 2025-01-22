@@ -1,32 +1,45 @@
-import { Button } from "@/components/ui/button";
-import { UserRole } from "@/types/collector-roles";
+import { UserRole } from '@/types/collector-roles';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Shield } from 'lucide-react';
 
 interface RoleAssignmentProps {
   userId: string;
   currentRoles: UserRole[];
-  onRoleChange: (userId: string, role: UserRole) => void;
+  onRoleChange: (userId: string, role: UserRole) => Promise<void>;
 }
 
-export const RoleAssignment = ({ userId, currentRoles, onRoleChange }: RoleAssignmentProps) => {
-  const availableRoles: UserRole[] = ['admin', 'collector', 'member'];
-
+export const RoleAssignment = ({
+  userId,
+  currentRoles,
+  onRoleChange
+}: RoleAssignmentProps) => {
   return (
-    <div className="flex gap-2">
-      {availableRoles.map((role) => (
-        <Button
-          key={role}
-          variant={currentRoles.includes(role) ? 'default' : 'outline'}
-          onClick={() => onRoleChange(userId, role)}
-          className={`
-            ${currentRoles.includes(role) 
-              ? 'bg-dashboard-accent1 hover:bg-dashboard-accent1/90' 
-              : 'border-dashboard-accent1/20 hover:border-dashboard-accent1/40'
-            }
-          `}
-        >
-          {role}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Shield className="w-4 h-4 mr-2" />
+          Manage Roles
         </Button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {(['admin', 'collector', 'member'] as UserRole[]).map((role) => (
+          !currentRoles.includes(role) && (
+            <DropdownMenuItem
+              key={role}
+              onClick={() => onRoleChange(userId, role)}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Add {role}
+            </DropdownMenuItem>
+          )
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
