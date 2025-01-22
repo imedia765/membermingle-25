@@ -13,8 +13,10 @@ export const RoleVerificationPanel = ({ collector }: RoleVerificationPanelProps)
   const hasCollectorRole = collector.roles.includes('collector');
   const hasValidSync = collector.sync_status?.status === 'completed';
   const lastSyncAttempt = collector.sync_status?.last_attempted_sync_at;
+  const hasAuthId = collector.auth_user_id !== null;
   
   const issues = [
+    !hasAuthId && 'No auth user ID associated',
     !hasCollectorRole && 'Missing collector role',
     !hasValidSync && 'Role sync incomplete',
     collector.sync_status?.error_message,

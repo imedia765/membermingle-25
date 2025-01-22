@@ -9,7 +9,7 @@ import {
 import { Shield } from 'lucide-react';
 
 interface RoleAssignmentProps {
-  userId: string;
+  userId: string | null;
   currentRoles: UserRole[];
   onRoleChange: (userId: string, role: UserRole) => Promise<void>;
 }
@@ -19,6 +19,8 @@ export const RoleAssignment = ({
   currentRoles,
   onRoleChange
 }: RoleAssignmentProps) => {
+  if (!userId) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
