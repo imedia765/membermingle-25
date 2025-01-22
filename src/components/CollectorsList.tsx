@@ -46,6 +46,9 @@ const CollectorsList = () => {
         action 
       });
       
+      // Trigger role sync after role update
+      await syncRolesMutation.mutateAsync();
+      
       toast({
         title: "Role updated",
         description: `Successfully ${action}ed ${role} role for ${collector.name}`,
@@ -67,6 +70,10 @@ const CollectorsList = () => {
         roleName,
         isActive
       });
+      
+      // Trigger role sync after enhanced role update
+      await syncRolesMutation.mutateAsync();
+      
       toast({
         title: "Enhanced role updated",
         description: `Successfully updated ${roleName} for ${collector.name}`,

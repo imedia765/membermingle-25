@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,26 +27,55 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { userRole, userRoles, roleLoading, hasRole } = useRoleAccess();
   const { toast } = useToast();
   
-  console.log('SidePanel render state:', {
-    userRole,
-    userRoles,
-    roleLoading
-  });
-
-  const handleLogoutClick = async () => {
-    try {
-      await handleSignOut(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Error signing out",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
+  // Memoize navigation items to prevent recreating on every render
+  const navigationItems = useMemo(() => [
+    {
+      name: 'Overview',
+      icon: LayoutDashboard,
+      tab: 'dashboard',
+      alwaysShow: true
+    },
+    {
+      name: 'Members',
+      icon: Users,
+      tab: 'users',
+      requiresRole: ['admin', 'collector'] as UserRole[]
+    },
+    {
+      name: 'Collectors & Financials',
+      icon: Wallet,
+      tab: 'financials',
+      requiresRole: ['admin'] as UserRole[]
+    },
+    {
+      name: 'System',
+      icon: Settings,
+      tab: 'system',
+      requiresRole: ['admin'] as UserRole[]
     }
-  };
+  ], []);
 
-  const handleTabChange = (tab: string) => {
+  // Memoize the shouldShowTab function with proper dependencies
+  const shouldShowTab = useCallback((tab: string): boolean => {
+    if (roleLoading) return tab === 'dashboard';
+    if (!userRoles || !userRole) return tab === 'dashboard';
+
+    switch (tab) {
+      case 'dashboard':
+        return true;
+      case 'users':
+        return hasRole('admin') || hasRole('collector');
+      case 'financials':
+        return hasRole('admin');
+      case 'system':
+        return hasRole('admin');
+      default:
+        return false;
+    }
+  }, [roleLoading, userRoles, userRole, hasRole]);
+
+  // Memoize the handleTabChange function with proper dependencies
+  const handleTabChange = useCallback((tab: string) => {
     if (roleLoading) {
       toast({
         title: "Please wait",
@@ -64,52 +94,33 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
         variant: "destructive",
       });
     }
-  };
+  }, [roleLoading, shouldShowTab, onTabChange, toast]);
 
-  const shouldShowTab = (tab: string): boolean => {
-    if (roleLoading) return tab === 'dashboard';
-    if (!userRoles || !userRole) return tab === 'dashboard';
-
-    switch (tab) {
-      case 'dashboard':
-        return true;
-      case 'users':
-        return hasRole('admin') || hasRole('collector');
-      case 'financials':
-        return hasRole('admin'); // Only show financials for admin
-      case 'system':
-        return hasRole('admin');
-      default:
-        return false;
+  const handleLogoutClick = useCallback(async () => {
+    try {
+      await handleSignOut(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Error signing out",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
     }
-  };
+  }, [handleSignOut, toast]);
 
-  const navigationItems = [
-    {
-      name: 'Overview',
-      icon: LayoutDashboard,
-      tab: 'dashboard',
-      alwaysShow: true
-    },
-    {
-      name: 'Members',
-      icon: Users,
-      tab: 'users',
-      requiresRole: ['admin', 'collector'] as UserRole[]
-    },
-    {
-      name: 'Collectors & Financials',
-      icon: Wallet,
-      tab: 'financials',
-      requiresRole: ['admin'] as UserRole[] // Only show for admin
-    },
-    {
-      name: 'System',
-      icon: Settings,
-      tab: 'system',
-      requiresRole: ['admin'] as UserRole[]
-    }
-  ];
+  // Memoize the role status text
+  const roleStatusText = useMemo(() => {
+    if (roleLoading) return 'Loading access...';
+    return userRole ? `Role: ${userRole}` : 'Access restricted';
+  }, [roleLoading, userRole]);
+
+  // Memoize the visible navigation items
+  const visibleNavigationItems = useMemo(() => {
+    return navigationItems.filter(item => 
+      item.alwaysShow || (!roleLoading && item.requiresRole?.some(role => userRoles?.includes(role)))
+    );
+  }, [navigationItems, roleLoading, userRoles]);
 
   return (
     <div className="flex flex-col h-full bg-dashboard-card border-r border-dashboard-cardBorder">
@@ -119,29 +130,27 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
           {roleLoading && <Loader2 className="h-4 w-4 animate-spin text-dashboard-accent1" />}
         </h2>
         <p className="text-sm text-dashboard-muted">
-          {roleLoading ? 'Loading access...' : userRole ? `Role: ${userRole}` : 'Access restricted'}
+          {roleStatusText}
         </p>
       </div>
       
       <ScrollArea className="flex-1 px-4 lg:px-6">
         <div className="space-y-1.5 py-4">
-          {navigationItems.map((item) => (
-            (item.alwaysShow || !roleLoading && item.requiresRole?.some(role => userRoles?.includes(role as UserRole))) && (
-              <Button
-                key={item.tab}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-2 text-sm font-medium",
-                  "hover:bg-dashboard-hover/10 hover:text-white",
-                  "transition-colors duration-200"
-                )}
-                onClick={() => handleTabChange(item.tab)}
-                disabled={roleLoading}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </Button>
-            )
+          {visibleNavigationItems.map((item) => (
+            <Button
+              key={item.tab}
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-2 text-sm font-medium",
+                "hover:bg-dashboard-hover/10 hover:text-white",
+                "transition-colors duration-200"
+              )}
+              onClick={() => handleTabChange(item.tab)}
+              disabled={roleLoading}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.name}
+            </Button>
           ))}
         </div>
       </ScrollArea>

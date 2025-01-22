@@ -1,3 +1,7 @@
+import { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['app_role'];
+
 export interface Collector {
   id: string;
   name: string | null;
@@ -11,7 +15,7 @@ export interface Collector {
   member_number: string | null;
   auth_user_id?: string | null;
   memberCount?: number;
-  roles: ("collector" | "admin" | "member")[];
+  roles: UserRole[];
   enhanced_roles: {
     role_name: string;
     is_active: boolean;

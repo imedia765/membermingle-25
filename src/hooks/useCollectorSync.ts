@@ -6,20 +6,37 @@ export const useCollectorSync = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const syncRolesMutation = useMutation({
+  return useMutation({
     mutationFn: async () => {
+      console.log('Starting role sync...');
       const { error } = await supabase.rpc('perform_user_roles_sync');
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Role sync error:', error);
+        throw error;
+      }
+
+      console.log('Role sync completed successfully');
+      return { success: true };
     },
     meta: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['members_collectors'] });
+        // Invalidate all related queries
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['collectors-roles'] }),
+          queryClient.invalidateQueries({ queryKey: ['userRoles'] }),
+          queryClient.invalidateQueries({ queryKey: ['roleSyncStatus'] })
+        ]).then(() => {
+          console.log('All queries invalidated after successful sync');
+        });
+
         toast({
           title: "Roles synchronized",
-          description: "The roles have been synchronized successfully.",
+          description: "User roles have been synchronized successfully.",
         });
       },
       onError: (error: Error) => {
+        console.error('Role sync error:', error);
         toast({
           title: "Error syncing roles",
           description: error.message,
@@ -28,6 +45,4 @@ export const useCollectorSync = () => {
       }
     }
   });
-
-  return syncRolesMutation;
 };

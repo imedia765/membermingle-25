@@ -13,7 +13,7 @@ const FinancialsView = () => {
       </header>
 
       <DashboardTabs defaultValue="overview" className="w-full">
-        <DashboardTabsList>
+        <DashboardTabsList className="grid w-full grid-cols-4 gap-0">
           <DashboardTabsTrigger value="overview">Payment Overview</DashboardTabsTrigger>
           <DashboardTabsTrigger value="collectors">Collectors Overview</DashboardTabsTrigger>
           <DashboardTabsTrigger value="payments">All Payments</DashboardTabsTrigger>

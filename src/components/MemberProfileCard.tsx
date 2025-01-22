@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Member } from "@/types/member";
-import { Collector } from "@/types/collector"; // Add this import
+import { Collector } from "@/types/collector";
 import ProfileHeader from "./profile/ProfileHeader";
 import ProfileAvatar from "./profile/ProfileAvatar";
 import ContactInfo from "./profile/ContactInfo";
@@ -128,6 +128,8 @@ const MemberProfileCard = ({ memberProfile }: MemberProfileCardProps) => {
                     userRole={userRole}
                     onEditClick={() => setShowEditDialog(true)}
                     onPaymentClick={() => setShowPaymentDialog(true)}
+                    collectorInfo={collectorInfo}
+                    memberNumber={memberProfile.member_number}
                   />
                 </div>
 
