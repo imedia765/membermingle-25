@@ -45,15 +45,23 @@ const CollectorRolesList = () => {
               .eq('user_id', collector.members?.[0]?.auth_user_id)
               .maybeSingle();
 
+            const validRoles = (userRoles || [])
+              .map(ur => ur.role)
+              .filter((role): role is UserRole => 
+                ['admin', 'collector', 'member'].includes(role));
+
             return {
               full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
               member_number: collector.member_number || '',
-              roles: (userRoles || []).map(ur => ur.role as UserRole),
+              roles: validRoles,
               auth_user_id: collector.members?.[0]?.auth_user_id || '',
-              role_details: (userRoles || []).map(ur => ({
-                role: ur.role as UserRole,
-                created_at: ur.created_at
-              })),
+              role_details: (userRoles || [])
+                .filter((ur): ur is { role: UserRole; created_at: string } => 
+                  ['admin', 'collector', 'member'].includes(ur.role))
+                .map(ur => ({
+                  role: ur.role,
+                  created_at: ur.created_at
+                })),
               email: collector.email || '',
               phone: collector.phone || '',
               prefix: collector.prefix || '',
@@ -121,7 +129,6 @@ const CollectorRolesList = () => {
 
   const handleSync = async (userId: string) => {
     try {
-      // Update sync status to indicate sync is in progress
       await supabase
         .from('sync_status')
         .upsert({
@@ -130,10 +137,8 @@ const CollectorRolesList = () => {
           status: 'in_progress'
         });
 
-      // Trigger roles sync
       await supabase.rpc('perform_user_roles_sync');
 
-      // Update sync status to completed
       await supabase
         .from('sync_status')
         .upsert({
