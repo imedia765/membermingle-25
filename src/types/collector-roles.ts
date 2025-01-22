@@ -17,7 +17,7 @@ export interface CollectorInfo {
   full_name: string;
   member_number: string;
   roles: UserRole[];
-  auth_user_id: string;
+  auth_user_id: string | null;
   role_details: {
     role: UserRole;
     created_at: string;
@@ -35,4 +35,17 @@ export interface CollectorInfo {
 
 export const isValidRole = (role: string): role is UserRole => {
   return ['admin', 'collector', 'member'].includes(role);
+};
+
+export const createDefaultSyncStatus = (userId: string): SyncStatus => {
+  return {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    sync_started_at: null,
+    last_attempted_sync_at: null,
+    status: 'pending',
+    error_message: null,
+    store_status: 'pending',
+    store_error: null
+  };
 };
