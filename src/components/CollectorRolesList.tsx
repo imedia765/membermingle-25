@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody } from '@/components/ui/table';
 import { CollectorRolesHeader } from './collectors/roles/CollectorRolesHeader';
 import { CollectorRolesRow } from './collectors/roles/CollectorRolesRow';
-import { CollectorInfo, UserRole } from '@/types/collector-roles';
+import { CollectorInfo, UserRole, SyncStatus } from '@/types/collector-roles';
 
 const CollectorRolesList = () => {
   const { toast } = useToast();
@@ -34,6 +34,17 @@ const CollectorRolesList = () => {
             // If no auth_user_id, return basic info without role data
             if (!authUserId) {
               console.log(`No auth_user_id found for collector: ${collector.name}`);
+              const defaultSyncStatus: SyncStatus = {
+                id: '',
+                user_id: '',
+                sync_started_at: null,
+                last_attempted_sync_at: null,
+                status: 'pending',
+                error_message: 'No auth user ID associated',
+                store_status: 'pending',
+                store_error: 'No auth user ID associated'
+              };
+
               return {
                 full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
                 member_number: collector.member_number || '',
@@ -45,12 +56,7 @@ const CollectorRolesList = () => {
                 prefix: collector.prefix || '',
                 number: collector.number || '',
                 enhanced_roles: [],
-                sync_status: {
-                  status: 'pending',
-                  store_status: 'pending',
-                  last_attempted_sync_at: null,
-                  store_error: 'No auth user ID associated'
-                }
+                sync_status: defaultSyncStatus
               };
             }
 
@@ -80,6 +86,17 @@ const CollectorRolesList = () => {
                 .filter((role): role is UserRole => 
                   ['admin', 'collector', 'member'].includes(role));
 
+              const defaultSyncStatus: SyncStatus = {
+                id: syncStatusResult.data?.id || '',
+                user_id: authUserId,
+                sync_started_at: syncStatusResult.data?.sync_started_at || null,
+                last_attempted_sync_at: syncStatusResult.data?.last_attempted_sync_at || null,
+                status: syncStatusResult.data?.status || 'pending',
+                error_message: syncStatusResult.data?.error_message || '',
+                store_status: syncStatusResult.data?.store_status || 'pending',
+                store_error: syncStatusResult.data?.store_error || null
+              };
+
               return {
                 full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
                 member_number: collector.member_number || '',
@@ -100,14 +117,21 @@ const CollectorRolesList = () => {
                   role_name: er.role_name,
                   is_active: er.is_active || false
                 })),
-                sync_status: syncStatusResult.data || {
-                  status: 'pending',
-                  store_status: 'pending',
-                  last_attempted_sync_at: null
-                }
+                sync_status: defaultSyncStatus
               };
             } catch (error) {
               console.error('Error fetching role data:', error);
+              const errorSyncStatus: SyncStatus = {
+                id: '',
+                user_id: authUserId,
+                sync_started_at: null,
+                last_attempted_sync_at: null,
+                status: 'error',
+                error_message: error instanceof Error ? error.message : 'Unknown error occurred',
+                store_status: 'error',
+                store_error: error instanceof Error ? error.message : 'Unknown error occurred'
+              };
+
               return {
                 full_name: collector.members?.[0]?.full_name || collector.name || 'N/A',
                 member_number: collector.member_number || '',
@@ -119,12 +143,7 @@ const CollectorRolesList = () => {
                 prefix: collector.prefix || '',
                 number: collector.number || '',
                 enhanced_roles: [],
-                sync_status: {
-                  status: 'error',
-                  store_status: 'error',
-                  last_attempted_sync_at: null,
-                  store_error: error instanceof Error ? error.message : 'Unknown error occurred'
-                }
+                sync_status: errorSyncStatus
               };
             }
           })
