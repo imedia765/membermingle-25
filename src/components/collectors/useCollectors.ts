@@ -12,20 +12,11 @@ export const useCollectors = (page: number, itemsPerPage: number) => {
       const from = (page - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
 
+      // First fetch collectors
       const { data: collectorsData, error: collectorsError, count } = await supabase
         .from('members_collectors')
-        .select(`
-          id,
-          name,
-          prefix,
-          number,
-          email,
-          phone,
-          active,
-          created_at,
-          updated_at,
-          member_number
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
+        .eq('active', true)
         .order('number', { ascending: true })
         .range(from, to);
       
@@ -37,28 +28,43 @@ export const useCollectors = (page: number, itemsPerPage: number) => {
       if (!collectorsData) return { data: [], count: 0 };
 
       const collectorsWithCounts = await Promise.all(collectorsData.map(async (collector) => {
+        // Get member count for this collector
         const { count } = await supabase
           .from('members')
           .select('*', { count: 'exact', head: true })
           .eq('collector', collector.name);
 
-        const { data: memberData } = await supabase
-          .from('members')
-          .select('auth_user_id')
-          .eq('member_number', collector.member_number)
-          .single();
+        // Get member data if member_number exists
+        let memberData = null;
+        if (collector.member_number) {
+          const { data: member } = await supabase
+            .from('members')
+            .select('auth_user_id')
+            .eq('member_number', collector.member_number)
+            .single();
+          memberData = member;
+        }
 
-        const { data: enhancedRoles } = await supabase
-          .from('enhanced_roles')
-          .select('*')
-          .eq('user_id', memberData?.auth_user_id);
+        // Get enhanced roles if we have auth_user_id
+        let enhancedRoles = [];
+        let syncStatus = null;
+        if (memberData?.auth_user_id) {
+          const { data: roles } = await supabase
+            .from('enhanced_roles')
+            .select('*')
+            .eq('user_id', memberData.auth_user_id);
+          
+          const { data: sync } = await supabase
+            .from('sync_status')
+            .select('*')
+            .eq('user_id', memberData.auth_user_id)
+            .single();
+          
+          enhancedRoles = roles || [];
+          syncStatus = sync;
+        }
 
-        const { data: syncStatus } = await supabase
-          .from('sync_status')
-          .select('*')
-          .eq('user_id', memberData?.auth_user_id)
-          .single();
-
+        // Get user roles if we have auth_user_id
         let roles: UserRole[] = [];
         if (memberData?.auth_user_id) {
           const { data: rolesData } = await supabase
