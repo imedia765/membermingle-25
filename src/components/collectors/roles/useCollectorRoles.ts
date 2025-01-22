@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CollectorInfo, UserRole } from "@/types/collector-roles";
+import { CollectorInfo, UserRole, SyncStatus } from "@/types/collector-roles";
 
 export const useCollectorRoles = () => {
   const { toast } = useToast();
@@ -33,6 +33,17 @@ export const useCollectorRoles = () => {
             
             if (!authUserId) {
               console.log(`No auth_user_id found for collector: ${collector.name}`);
+              const defaultSyncStatus: SyncStatus = {
+                id: crypto.randomUUID(),
+                user_id: null,
+                sync_started_at: null,
+                last_attempted_sync_at: new Date().toISOString(),
+                status: 'pending',
+                error_message: 'No auth user ID associated',
+                store_status: 'pending',
+                store_error: 'No auth user ID associated'
+              };
+
               return {
                 full_name: collector.name || 'N/A',
                 member_number: collector.member_number || '',
@@ -44,12 +55,7 @@ export const useCollectorRoles = () => {
                 prefix: collector.prefix || '',
                 number: collector.number || '',
                 enhanced_roles: [],
-                sync_status: {
-                  status: 'pending',
-                  error_message: 'No auth user ID associated',
-                  store_status: 'pending',
-                  store_error: 'No auth user ID associated'
-                }
+                sync_status: defaultSyncStatus
               };
             }
 
@@ -65,6 +71,17 @@ export const useCollectorRoles = () => {
                 .maybeSingle()
             ]);
 
+            const defaultSyncStatus: SyncStatus = {
+              id: crypto.randomUUID(),
+              user_id: authUserId,
+              sync_started_at: null,
+              last_attempted_sync_at: new Date().toISOString(),
+              status: 'pending',
+              error_message: null,
+              store_status: 'pending',
+              store_error: null
+            };
+
             return {
               full_name: collector.name || 'N/A',
               member_number: collector.member_number || '',
@@ -79,12 +96,7 @@ export const useCollectorRoles = () => {
               prefix: collector.prefix || '',
               number: collector.number || '',
               enhanced_roles: [],
-              sync_status: syncStatus.data || {
-                status: 'pending',
-                error_message: null,
-                store_status: 'pending',
-                store_error: null
-              }
+              sync_status: syncStatus.data || defaultSyncStatus
             };
           })
         );
